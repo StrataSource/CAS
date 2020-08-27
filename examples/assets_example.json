@@ -1,0 +1,82 @@
+{
+    "defaults": {},
+    "assets": [
+        {
+            "type": "model",
+            "files": "mymod/models/**/*.mc"
+        },
+        {
+            "type": "vice",
+            "src": "$(path.game)",
+            "options": {
+                "key": "blahblah"
+            },
+            "files": [
+                "mymod/cfg/cpu_level_*.kv",
+                "mymod/cfg/gpu_level_*.kv",
+                "mymod/cfg/gpu_mem_level_*.kv",
+                "mymod/cfg/mem_level_*.kv"
+            ]
+        }
+    ],
+    "subsystems": [
+        {
+            "module": "assetbuilder.subsystems.fgdbuild",
+            "options": {
+                "gamedir": "mymod",
+                "branch": "P2CE",
+                "source": "$(path.content)/P2CE-FGD",
+                "dest": "$(path.game)"
+            }
+        },
+        {
+            "module": "assetbuilder.subsystems.vpk",
+            "options": {
+                "packfiles": [
+                    {
+                        "prefix": "pak01",
+                        "folder": "mymod",
+                        "nobuild": "trunk",
+                        "include": [
+                            "cfg/config_default.cfg",
+                            "cfg/moddefaults*.txt",
+                            "cfg/modsettings.cfg",
+                            "cfg/mounts.kv",
+                            "cfg/*.ekv",
+                            "expressions/**/*",
+                            "maps/**/*",
+                            "materials/**/*",
+                            "models/**/*",
+                            "panorama/**/*",
+                            "particles/**/*",
+                            "resource/**/*",
+                            "scenes/**/*",
+                            "scripts/**/*",
+                            "sound/**/*"
+                        ],
+                        "exclude": [
+                            "*.ain"
+                        ]
+                    },
+                    {
+                        "prefix": "pak01",
+                        "folder": "platform",
+                        "nobuild": "trunk",
+                        "include": ["*"],
+                        "exclude": [
+                            "config/**/*",
+                            "resource/**/*",
+                            "shaders/**/*"
+                        ]
+                    },
+                    {
+                        "prefix": "pak01",
+                        "folder": "hammer",
+                        "nobuild": "trunk",
+                        "include": ["*"]
+                    }
+                ]
+            }
+        }
+    ]
+}
