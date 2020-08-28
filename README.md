@@ -11,3 +11,17 @@ Example:
 ```
 python3 ./cli.py --path "path/to/your/root/dir" --threads 1
 ```
+
+## Configuration
+
+AssetBuilder is modular, and has two main types of components: drivers and subsystems.
+
+### Drivers
+Drivers handle building individual files that typically have a single input file and one or more output files. For speed, all input dependencies are hashed to avoid unnecessary rebuilds.
+
+An example of a driver is `model` - this takes a .mc or .qc input file and outputs a .mdl file.
+
+### Subsystems
+Subsystems handle actions that are unpredictable, have many side effects, or behaviour that cannot be handled by drivers.
+
+An example of a subsystem is `vpk` - this allows packing several files into one or more VPK archives.
