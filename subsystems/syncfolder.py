@@ -13,12 +13,7 @@ class SyncFolderSubsystem(BuildSubsystem):
         from_dir = Path(self.env.root).joinpath(self.config['from']).resolve()
         to_dir = Path(self.env.root).joinpath(self.config['to']).resolve()
 
-        verbose_log = 'verbose' in self.config.keys() and self.config['verbose'].casefold() == 'true'
-
-        print(from_dir)
-        print(to_dir)
-
-        sync(from_dir, to_dir, 'sync', purge = True, verbose = verbose_log)
+        sync(from_dir, to_dir, 'sync', purge = True, verbose = self.env.verbose)
 
         return True
 
