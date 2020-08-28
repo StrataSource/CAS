@@ -25,3 +25,9 @@ An example of a driver is `model` - this takes a .mc or .qc input file and outpu
 Subsystems handle actions that are unpredictable, have many side effects, or behaviour that cannot be handled by drivers.
 
 An example of a subsystem is `vpk` - this allows packing several files into one or more VPK archives.
+
+## Dependencies
+
+```
+pip install dirsync
+```
