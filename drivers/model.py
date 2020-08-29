@@ -18,6 +18,10 @@ class ModelDriver(SerialDriver):
         s1 = line.rfind('"', 0, i) + 1
         s2 = line.find('"', i)
 
+        # exclusions
+        if '$includemodel' in line:
+            return
+
         path = line[s1:s2]
         set.append(path)
     
