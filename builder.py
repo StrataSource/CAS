@@ -21,7 +21,12 @@ def _run_async_serial(driver: SerialDriver, context: BuildContext, asset: Asset)
 
     context.logger = logger
     context.logger.info(f'compiling {str(relpath)}')
-    return driver.compile(context, asset)
+
+    success = driver.compile(context, asset)
+
+    if not success:
+        context.logger.error(f'  Failed compile {str(relpath)}')
+    return success
 
 def _run_async_batched(driver: BatchedDriver, context: BuildContext, assets: List[Asset]) -> bool:
     context.logger = logger
@@ -130,7 +135,7 @@ class Builder():
                         return False
                     if not self.cache.validate(f):
                         invalidated = True
-                
+
                 for f in result.outputs:
                     if not self.cache.validate(f):
                         invalidated = True
@@ -138,7 +143,7 @@ class Builder():
                 aid = asset.get_id()
                 hash_inputs[aid] = result.inputs
                 hash_outputs[aid] = result.outputs
-                
+
                 if invalidated:
                     total_build += 1
                     context.buildable.append(asset)
@@ -176,7 +181,7 @@ class Builder():
             pool.close()
         except KeyboardInterrupt:
             pool.terminate()
-        
+
         pool.join()
 
         for job in jobs:
