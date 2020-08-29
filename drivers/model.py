@@ -18,10 +18,6 @@ class ModelDriver(SerialDriver):
         s1 = line.rfind('"', 0, i) + 1
         s2 = line.find('"', i)
 
-        # exclusions
-        if '$includemodel' in line:
-            return
-
         path = line[s1:s2]
         set.append(path)
     
@@ -37,6 +33,11 @@ class ModelDriver(SerialDriver):
             qc = f.readlines()
         
         for line in qc:
+            # exclude comments and specific strings
+            if line.startswith('//'):
+                continue
+            if '$includemodel' in line:
+                continue
             self._deps_searchline('smd', line, inputs)
             self._deps_searchline('mdl', line, outputs)
         
