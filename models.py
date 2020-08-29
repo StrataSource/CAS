@@ -17,6 +17,7 @@ class BuildEnvironment():
         self.root = path
         self.content = config['defaults'].get('content', 'content')
         self.game = config['defaults'].get('game', 'game')
+        self.bindir = config['defaults'].get('bin')
 
         self._setup_bindir()
         self._globals = {
@@ -72,6 +73,9 @@ class BuildEnvironment():
 
 
     def _setup_bindir(self):
+        if self.bindir is not None:
+            return
+        
         plat = sys.platform
 
         ext = ''
