@@ -37,6 +37,11 @@ class ModelDriver(SerialDriver):
             qc = f.readlines()
         
         for line in qc:
+            # exclude comments and specific strings
+            if line.startswith('//'):
+                continue
+            if '$includemodel' in line:
+                continue
             self._deps_searchline('smd', line, inputs)
             self._deps_searchline('mdl', line, outputs)
         
