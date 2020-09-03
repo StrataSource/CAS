@@ -49,7 +49,7 @@ class Builder():
         self.args = self.env.config.get('args', {})
         self.dryrun = self.args.get('dry_run', False)
 
-    def _load_subsystem(self, module: str, config: dict) -> BuildSubsystem:
+    def _load_subsystem(self, name: str, module: str, config: dict) -> BuildSubsystem:
         subsystem = self._subsystems.get(module)
         if subsystem is not None:
             return
@@ -60,7 +60,7 @@ class Builder():
         logging.debug(f'loaded \'{module}\' subsystem')
 
         subsystem = mod._subsystem(self.env, config)
-        self._subsystems[module] = subsystem
+        self._subsystems[name] = subsystem
 
     def _get_asset_driver(self, name: str, config: dict) -> BaseDriver:
         driver = self._drivers.get(name)
@@ -207,9 +207,9 @@ class Builder():
     def _run_subsystems(self) -> bool:
         if self.dryrun:
             return True
-
-        for sys in self.env.config['subsystems']:
-            self._load_subsystem(sys['module'], sys.get('options', {}))
+        
+        for k, v in self.env.config['subsystems'].items():
+            self._load_subsystem(k, v['module'], v.get('options', {}))
         for name, sys in self._subsystems.items():
             logging.info(f'running subsystem {name}')
             if self.args['clean']:

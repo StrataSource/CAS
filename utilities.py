@@ -1,6 +1,7 @@
 import os
 import sys
 import pathlib
+import functools
 
 def paths_to_relative(root, paths):
     out = []
@@ -19,3 +20,15 @@ def get_platform_bindir():
         return 'linux64'
     else:
         raise Exception(f'Unsupported platform {plat}')
+
+
+def set_dot_notation(target: dict, key: str, value):
+    keys = key.split('.')
+    pre = target
+    pre_k = None
+    last = target
+    for key in keys:
+        pre = last
+        last = last[key]
+        pre_k = key
+    pre[pre_k] = value

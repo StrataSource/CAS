@@ -77,7 +77,9 @@ class ConfigurationManager():
 
     def _eval_conditional_str(self, cond: str) -> bool:
         injected = self._inject_config_str(cond)
-        result = simpleeval.simple_eval(injected)
+        result = simpleeval.simple_eval(injected, functions={
+            'R': lambda k: self[k]
+        })
 
         logging.debug(f'\"{cond}\" evaluated to: {result}')
         return result
