@@ -26,8 +26,35 @@ Subsystems handle actions that are unpredictable, have many side effects, or beh
 
 An example of a subsystem is `vpk` - this allows packing several files into one or more VPK archives.
 
+### Conditional Statements
+AssetBuilder has support for conditional statements to include or exclude segments of configuration whenever a condition is met.
+
+Specify the condition inside the block you want to set with the special `@condition` key.
+Inside, you may use Python expression syntax. The `R(x)` function can be used to insert a global into the statement.
+
+Example:
+```json
+{
+    "prefix": "pak01",
+    "folder": "hammer",
+    "include": ["*"],
+
+    "@condition": "R('args.build_type') != 'trunk'"
+}
+```
+
+### Globals
+There is a limited set of globals you can reference in conditional statements (with `R('foo.bar')`) and strings (with `$(foo.bar)`).
+- `path.root`: The root path of your workspace.
+- `path.content`: The content directory. Defaults to `$(path.root)/content`.
+- `path.game`: The game directory. Defaults to `$(path.root)/game`.
+- `path.secrets`: The directory that contains build secrets.
+- `args`: All arguments passed in to the build system.
+- `assets`: The value of the `assets` key in the configuration file.
+- `subsystems`: The value of the `subsystems` key in the configuration file.
+
 ## Dependencies
 
 ```
-pip install dirsync
+python3 -m pip -r requirements.txt
 ```
