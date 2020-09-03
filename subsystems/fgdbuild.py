@@ -12,6 +12,9 @@ import importlib.util
 import contextlib
 
 class FGDBuildSubsystem(BuildSubsystem):
+    """
+    Subsystem that builds FGDs and Hammer assets from HammerAddons
+    """
     def build(self) -> bool:
         gamedir = self.config['gamedir']
 

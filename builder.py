@@ -20,14 +20,14 @@ def _run_async_serial(driver: SerialDriver, context: BuildContext, asset: Asset)
     relpath = os.path.relpath(asset.path, driver.env.root)
 
     context.logger = logger
-    context.logger.info(f'compiling {str(relpath)}')
+    context.logger.info(f'(CC) {str(relpath)}')
     return driver.compile(context, asset)
 
 def _run_async_batched(driver: BatchedDriver, context: BuildContext, assets: List[Asset]) -> bool:
     context.logger = logger
     for asset in assets:
         relpath = os.path.relpath(asset.path, driver.env.root)
-        context.logger.info(f'compiling {str(relpath)}')
+        context.logger.info(f'(CC) {str(relpath)}')
     return driver.compile_all(context, assets)
 
 class Builder():
@@ -72,7 +72,7 @@ class Builder():
         return driver
 
     def _load_asset_context(self, config: dict) -> List[Asset]:
-        srcpath = config['src'] if 'src' in config else self.env.get_global('path.content')
+        srcpath = config['src'] if 'src' in config else self.env.config['path.content']
         srcpath = os.path.join(self.env.root, srcpath)
         if not os.path.exists(srcpath):
             raise Exception(f'The asset source folder \"{srcpath}\" does not exist.')
@@ -200,6 +200,9 @@ class Builder():
 
 
     def _run_subsystems(self) -> bool:
+        if self.dryrun:
+            return True
+
         for sys in self.env.config['subsystems']:
             self._load_subsystem(sys['module'], sys.get('options', {}))
         for name, sys in self._subsystems.items():
@@ -214,6 +217,8 @@ class Builder():
 
 
     def build(self) -> bool:
+        logging.debug(f'build starting with arguments: {self.args}')
+
         self.cache.load()
         if not self._run_asset_build():
             logging.error('Asset build phase failed')

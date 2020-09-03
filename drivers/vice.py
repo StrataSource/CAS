@@ -11,6 +11,9 @@ EXT_MAP = {
 }
 
 class ViceDriver(BatchedDriver):
+    """
+    Driver that encrypts files with an ICE key using VICE
+    """
     def _tool_name(self):
         return 'vice.exe'
 

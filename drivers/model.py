@@ -7,6 +7,10 @@ import subprocess
 import os
 
 class ModelDriver(SerialDriver):
+    """
+    Driver that handles compiling studio model files
+    with either mdlcompile or studiomdl
+    """
     def _tool_name(self):
         return 'mdlcompile.exe'
 

@@ -1,4 +1,5 @@
-import assetbuilder.utilities
+import assetbuilder.utilities as utilities
+from assetbuilder.config import ConfigurationManager
 
 from typing import List, Set
 from pathlib import Path
@@ -14,87 +15,24 @@ class BuildEnvironment():
     Contains attributes about the current build environment
     """
     def __init__(self, path: str, config: dict):
-        self.root = path
-        self.content = config['defaults'].get('content', 'content')
-        self.game = config['defaults'].get('game', 'game')
+        self.config = ConfigurationManager(path, config)
+
+        self.verbose = self.config['args.verbose']
+        
+        self.root = self.config['path.root']
+        self.content = self.config['path.content']
+        self.game = self.config['path.game']
 
         self._setup_bindir()
-        self._globals = {
-            'path.root': self.root,
-            'path.content': self.content,
-            'path.game': self.game,
-            'path.secrets': os.path.join(self.root, 'src/devtools/buildsys/secrets')
-        }
-
-        self.verbose = config['args'].get('verbose', False)
-
-        for k, v in config.items():
-            config[k] = self._inject_config(v)
-        self.config = config
-
-
-    def _inject_config(self, config):
-        if isinstance(config, dict):
-            for k, v in config.items():
-                config[k] = self._inject_config(v)
-        elif isinstance(config, list):
-            for k, v in enumerate(config):
-                config[k] = self._inject_config(v)
-        elif isinstance(config, str):
-            config = self._inject_config_str(config)
-        return config
-
-
-    def _inject_config_str(self, config: str) -> str:
-        prev = None
-        inblock = False
-        current = ''
-        result = ''
-
-        for c in config:
-            if c == '$':
-                prev = c
-                continue
-            if not inblock and c == '(' and prev == '$':
-                # read to end for key
-                inblock = True
-            elif c == ')':
-                result += self.get_global(current)
-
-                current = ''
-                inblock = False
-            elif inblock:
-                current += c
-            else:
-                result += c
-            prev = c
-        return result
-
 
     def _setup_bindir(self):
-        plat = sys.platform
-
-        ext = ''
-        if plat == 'win32':
-            ext = 'win64'
-        elif plat.startswith('darwin'):
-            ext = 'osx64'
-        elif plat.startswith('linux'):
-            ext = 'linux64'
-        else:
-            raise Exception(f'Unsupported platform {plat}')
-
-        self.bindir = os.path.join(self.root, self.game, 'bin', ext)
+        self.bindir = os.path.join(self.root, self.game, 'bin', utilities.get_platform_bindir())
         if not os.path.exists(self.bindir):
             raise Exception('Could not find the bin directory')
         logging.debug(f'using bin directory {self.bindir}')
 
-
     def get_tool(self, tool: str):
         return os.path.join(self.bindir, tool)
-
-    def get_global(self, key: str):
-        return self._globals[key]
 
     def run_tool(self, *args, **kwargs) -> int:
         predef = {}
