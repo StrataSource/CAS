@@ -21,8 +21,12 @@ class ConfigurationManager():
             'path.root': root,
             'path.content': config['defaults'].get('content', 'content'),
             'path.game': config['defaults'].get('game', 'game'),
-            'path.secrets': os.path.join(root, 'src/devtools/buildsys/secrets')
+            'path.secrets': os.path.join(root, 'src/devtools/buildsys/secrets'),
         }
+
+        if not config['defaults'].get('project'):
+            raise Exception('The \"project\" default must be defined!')
+        self._globals['path.vproject'] = os.path.join(root, self._globals['path.game'], config['defaults']['project'])
 
         # config is only parsed once, on initialisation
         self._config = self._parse_config(self._config)

@@ -39,6 +39,9 @@ class BuildEnvironment():
         if not self.verbose:
             predef['stdout'] = subprocess.DEVNULL
         predef['stderr'] = subprocess.STDOUT
+        
+        predef['env'] = {}
+        predef['env']['VPROJECT'] = self.config['path.vproject']
 
         result = subprocess.run(*args, **dict(predef, **kwargs))
         return result.returncode

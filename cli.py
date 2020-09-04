@@ -43,6 +43,8 @@ if __name__ == '__main__':
         config = DotMap(json.load(f))
 
     # apply overrides
+    if not args.override:
+        args.override = []
     for x in args.override:
         assert x.count('=') <= 1, 'invalid key-value operator'
         if '=' in x:
