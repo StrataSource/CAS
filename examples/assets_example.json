@@ -1,9 +1,16 @@
 {
-    "defaults": {},
+    "defaults": {
+        "project": "mymod"
+    },
     "assets": [
         {
+            "type": "caption",
+            "src": "$(path.game)",
+            "files": "$(path.project)/resource/closecaption_*.txt"
+        },
+        {
             "type": "model",
-            "files": "mymod/models/**/*.mc"
+            "files": "$(path.project)/models/**/*.mc"
         },
         {
             "type": "vice",
@@ -19,8 +26,8 @@
             ]
         }
     ],
-    "subsystems": [
-        {
+    "subsystems": {
+        "fgdbuild": {
             "module": "assetbuilder.subsystems.fgdbuild",
             "options": {
                 "gamedir": "mymod",
@@ -29,14 +36,14 @@
                 "dest": "$(path.game)"
             }
         },
-        {
+        "vpk": {
             "module": "assetbuilder.subsystems.vpk",
+            "@condition": "R('args.build_type') != 'trunk'",
             "options": {
                 "packfiles": [
                     {
                         "prefix": "pak01",
-                        "folder": "mymod",
-                        "nobuild": "trunk",
+                        "folder": "$(path.project)",
                         "include": [
                             "cfg/config_default.cfg",
                             "cfg/moddefaults*.txt",
@@ -61,7 +68,6 @@
                     {
                         "prefix": "pak01",
                         "folder": "platform",
-                        "nobuild": "trunk",
                         "include": ["*"],
                         "exclude": [
                             "config/**/*",
@@ -72,11 +78,10 @@
                     {
                         "prefix": "pak01",
                         "folder": "hammer",
-                        "nobuild": "trunk",
                         "include": ["*"]
                     }
                 ]
             }
         }
-    ]
+    }
 }
