@@ -10,7 +10,7 @@ class AssetCache():
     """
     def __init__(self, path: Path):
         self.path = path
-        self.file = path.joinpath(path, '.assets_c.json')
+        self.file = path.joinpath(path, 'content', '.assets_c.json')
         self.hashes = {}
 
     def load(self):
