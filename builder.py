@@ -228,7 +228,7 @@ class Builder():
                 continue
 
             category = v.get('category')
-            if category and category != self.env.build_category:
+            if self.env.build_category and category and category != self.env.build_category:
                 logging.debug(f'subsystem {k} skipped (category mismatch)')
                 continue
             self._load_subsystem(k, v['module'], v.get('options', {}))

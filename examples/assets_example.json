@@ -29,6 +29,7 @@
     "subsystems": {
         "fgdbuild": {
             "module": "assetbuilder.subsystems.fgdbuild",
+            "category": "assets",
             "options": {
                 "gamedir": "mymod",
                 "branch": "P2CE",
