@@ -77,9 +77,12 @@ class Builder():
         return driver
 
     def _load_asset_context(self, config: dict) -> List[Asset]:
-        srcpath = config['src'] if 'src' in config else self.env.config['path.content']
-        srcpath = os.path.join(self.env.root, srcpath)
-        if not os.path.exists(srcpath):
+        if 'src' in config:
+            srcpath = Path(config['src'])
+        else:
+            srcpath = self.env.config['path.content']
+        
+        if not srcpath.exists():
             raise Exception(f'The asset source folder \"{srcpath}\" does not exist.')
 
         patterns = []
@@ -207,9 +210,30 @@ class Builder():
     def _run_subsystems(self) -> bool:
         if self.dryrun:
             return True
+
+        whitelist = self.args['include_subsystems']
+        blacklist = self.args['exclude_subsystems']
+        if whitelist:
+            whitelist = whitelist.split(',')
+        if blacklist:
+            blacklist = blacklist.split(',')
         
+        # load
         for k, v in self.env.config['subsystems'].items():
+            if whitelist and not k in whitelist:
+                logging.debug(f'subsystem {k} skipped (not whitelisted)')
+                continue
+            if blacklist and k in blacklist:
+                logging.debug(f'subsystem {k} skipped (blacklisted)')
+                continue
+
+            category = v.get('category')
+            if category and category != self.env.build_category:
+                logging.debug(f'subsystem {k} skipped (category mismatch)')
+                continue
             self._load_subsystem(k, v['module'], v.get('options', {}))
+        
+        # run
         for name, sys in self._subsystems.items():
             logging.info(f'running subsystem {name}')
             if self.args['clean']:
@@ -224,8 +248,14 @@ class Builder():
     def build(self) -> bool:
         logging.debug(f'build starting with arguments: {self.args}')
 
+        # skip asset build if we specify a different category explicitly
+        skip_assets = self.args['skip_assets']
+        if self.env.build_category is not None and self.env.build_category != 'assets':
+            logging.debug('asset build skipped (category mismatch)')
+            skip_assets = True
+
         self.cache.load()
-        if not self._run_asset_build():
+        if not skip_assets and not self._run_asset_build():
             logging.error('Asset build phase failed')
             return False
         if not self._run_subsystems():

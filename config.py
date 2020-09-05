@@ -15,18 +15,23 @@ class ConfigurationManager():
     """
     Processes and resolves asset builder configuration blocks.
     """
-    def __init__(self, root: str, config: dict):
+    def __init__(self, root: Path, config: dict):
         self._config = config
         self._globals = {
             'path.root': root,
-            'path.content': config['defaults'].get('content', 'content'),
-            'path.game': config['defaults'].get('game', 'game'),
-            'path.secrets': os.path.join(root, 'src/devtools/buildsys/secrets'),
+            'path.content': root.joinpath('content'),
+            'path.game': root.joinpath('game'),
+            'path.src': root.joinpath('src')
         }
+
+        self._globals['path.devtools'] = self._globals['path.src'].joinpath('devtools')
+        self._globals['path.secrets'] = self._globals['path.devtools'].joinpath('buildsys', 'secrets')
+        assert self._globals['path.content'].exists()
+        assert self._globals['path.game'].exists()
 
         if not config['defaults'].get('project'):
             raise Exception('The \"project\" default must be defined!')
-        self._globals['path.vproject'] = os.path.join(root, self._globals['path.game'], config['defaults']['project'])
+        self._globals['path.vproject'] = self._globals['path.game'].joinpath(config['defaults']['project']).resolve()
 
         # config is only parsed once, on initialisation
         self._config = self._parse_config(self._config)
@@ -68,7 +73,7 @@ class ConfigurationManager():
                 # read to end for key
                 inblock = True
             elif inblock and c == ')':
-                result += self.get(current, 'None')
+                result += str(self.get(current, 'None'))
 
                 current = ''
                 inblock = False
@@ -98,10 +103,11 @@ class ConfigurationManager():
         if isinstance(config, dict):
             result = {}
 
-            # initial scan to eval @condition
-            cond = config.get('@condition')
-            if isinstance(cond, str) and not self._eval_conditional_str(cond):
-                return None
+            # initial scan to eval @conditions
+            conditions = config.get('@conditions', [])
+            for cond in conditions:
+                if isinstance(cond, str) and not self._eval_conditional_str(cond):
+                    return None
 
             for k, v in config.items():
                 if k == "@condition":

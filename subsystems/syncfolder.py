@@ -10,8 +10,8 @@ import logging
 
 class SyncFolderSubsystem(BuildSubsystem):
     def build(self) -> bool:
-        from_dir = Path(self.env.root).joinpath(self.config['from']).resolve()
-        to_dir = Path(self.env.root).joinpath(self.config['to']).resolve()
+        from_dir = self.env.root.joinpath(self.config['from']).resolve()
+        to_dir = self.env.root.joinpath(self.config['to']).resolve()
 
         sync(from_dir, to_dir, 'sync', purge = True, verbose = self.env.verbose)
 

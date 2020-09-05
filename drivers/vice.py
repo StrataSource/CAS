@@ -15,7 +15,7 @@ class ViceDriver(BatchedDriver):
     Driver that encrypts files with an ICE key using VICE
     """
     def _tool_name(self):
-        return 'vice.exe'
+        return 'vice'
 
     def precompile(self, context: BuildContext, asset: Asset) -> List[str]:
         asset.outpath = asset.path.with_suffix('.ekv')

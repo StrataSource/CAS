@@ -11,7 +11,7 @@ class CaptionDriver(SerialDriver):
     Driver that handles compiling closed captions
     """
     def _tool_name(self):
-        return 'captioncompiler.exe'
+        return 'captioncompiler'
 
     def precompile(self, context: BuildContext, asset: Asset) -> List[str]:
         asset.outpath = asset.path.with_suffix('.dat')

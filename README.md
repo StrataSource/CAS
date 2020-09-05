@@ -29,7 +29,7 @@ An example of a subsystem is `vpk` - this allows packing several files into one 
 ### Conditional Statements
 AssetBuilder has support for conditional statements to include or exclude segments of configuration whenever a condition is met.
 
-Specify the condition inside the block you want to set with the special `@condition` key.
+Specify the conditions inside the block you want to set as a list with the special `@conditions` key.
 Inside, you may use Python expression syntax. The `R(x)` function can be used to insert a global into the statement.
 
 Example:
@@ -39,7 +39,7 @@ Example:
     "folder": "hammer",
     "include": ["*"],
 
-    "@condition": "R('args.build_type') != 'trunk'"
+    "@conditions": ["R('args.build_type') != 'trunk'"]
 }
 ```
 

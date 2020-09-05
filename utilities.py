@@ -2,6 +2,8 @@ import os
 import sys
 import pathlib
 import functools
+import struct
+
 
 def paths_to_relative(root, paths):
     out = []
@@ -9,17 +11,21 @@ def paths_to_relative(root, paths):
         out.append(os.path.relpath(path, root))
     return out
 
-def get_platform_bindir():
+
+def resolve_platform_name():
     plat = sys.platform
+    arch = struct.calcsize('P') * 8
+    assert arch in [32, 64]
 
     if plat == 'win32':
-        return 'win64'
+        plat = 'win'
     elif plat.startswith('darwin'):
-        return 'osx64'
+        plat = 'osx'
     elif plat.startswith('linux'):
-        return 'linux64'
+        pass
     else:
         raise Exception(f'Unsupported platform {plat}')
+    return f'{plat}{str(arch)}'
 
 
 def set_dot_notation(target: dict, key: str, value):

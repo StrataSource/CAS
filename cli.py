@@ -13,20 +13,40 @@ from pathlib import Path
 
 from dotmap import DotMap
 
+
+def _resolve_root_path() -> Path:
+    root = Path.cwd()
+    while True:
+        dirs = os.listdir(root)
+        if 'content' in dirs and 'game' in dirs:
+            # we may have a match, verify we have a valid path
+            if Path(os.path.join(root, 'content', 'assets.json')).exists():
+                return Path(root).resolve()
+        root = root.parent
+        if not root:
+            break
+    return None
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Builds Source Engine assets'
     )
 
-    parser.add_argument('-p', '--path', type=str, help='Path to the root project folder. Should contain game and content subfolders.', required=True)
+    parser.add_argument('-p', '--path', type=str, help='Path to the root project folder. Should contain game and content subfolders. If this is not specified, it is autodetected.')
     parser.add_argument('-f', '--force', action='store_true', help='Forces a rebuild of all assets')
     parser.add_argument('-t', '--threads', type=int, default=multiprocessing.cpu_count(), help='Number of threads to use to build assets. Defaults to the number of CPUs on the system.')
     parser.add_argument('-c', '--clean', action='store_true', help='Cleans the build environment.')
     parser.add_argument('-b', '--build-type', type=str.lower, choices=['trunk', 'staging', 'release'], default='trunk', help='The type of the build.')
+    parser.add_argument('-g', '--build-category', type=str.lower, help='The category of the build. If not specified, all categories will be assumed.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Write verbose output for debugging.')
     parser.add_argument('-d', '--dry-run', action='store_true', help='Prints the arguments that would be passed to VPC and exits.')
 
     parser.add_argument('-o', '--override', action='append', help='Overrides the configuration path specified by x.')
+
+    parser.add_argument('--skip-assets', action='store_true', help='Skips building assets.')
+    parser.add_argument('--include-subsystems', type=str, help='Comma-seperated list of subsystems to include in the build.')
+    parser.add_argument('--exclude-subsystems', type=str, help='Comma-seperated list of subsystems to exclude from the build.')
 
     args = parser.parse_args()
     if args.verbose:
@@ -34,12 +54,23 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(level=logging.INFO)
 
-    cache_path = os.path.join(args.path, 'content', '.assets_c.json')
-    if args.force and os.path.exists(cache_path):
-        os.remove(cache_path)
+    # if the root path is not specified, try to autodetect it
+    if args.path:
+        root_path = Path(args.path).resolve()
+    else:
+        root_path = _resolve_root_path()
+    if not root_path:
+        logging.error('Couldn\'t find the root path. Ensure you\'re running assetbuilder from within a subdirectory of the root folder, or use the -p/--path argument to specify it.')
+        exit(1)
 
-    config_file = os.path.join(args.path, 'content', 'assets.json')
-    with open(config_file, 'rb') as f:
+    content_path = root_path.joinpath('content')
+
+    cache_path = content_path.joinpath('.assets_c.json')
+    if args.force and cache_path.exists():
+        cache_path.unlink()
+
+    config_file = content_path.joinpath('assets.json')
+    with config_file.open('rb') as f:
         config = DotMap(json.load(f))
 
     # apply overrides
@@ -54,6 +85,6 @@ if __name__ == '__main__':
             utilities.set_dot_notation(config, x, True)
 
     config['args'] = {**config.get('args', {}), **vars(args)}
-    builder = assetbuilder.builder.Builder(Path(args.path).resolve(), config)
+    builder = assetbuilder.builder.Builder(root_path, config)
     if not builder.build():
         exit(1)

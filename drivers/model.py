@@ -12,7 +12,7 @@ class ModelDriver(SerialDriver):
     with either mdlcompile or studiomdl
     """
     def _tool_name(self):
-        return 'mdlcompile.exe'
+        return 'mdlcompile'
 
     def _deps_searchline(self, token, line, set):
         line = line.strip()
@@ -54,14 +54,13 @@ class ModelDriver(SerialDriver):
         return result
 
     def precompile(self, context: BuildContext, asset: Asset) -> List[str]:
-        # TODO: move gamedir to build context so we don't have to do this jank-ass stuff here?
-        dest_root = Path(os.path.join(self.env.root, self.env.game))
-        gamedir = os.path.relpath(asset.path.parent, os.path.join(self.env.root, self.env.content))
-        gamedir = gamedir.replace('\\', '/').split('/')[0]
+        # TODO: perhaps we should have another way of doing this rather than jankily "autodetecting" the dest
+        gamedir = os.path.relpath(asset.path.parent, self.env.root)
+        gamedir = gamedir.replace('\\', '/').split('/')[1]
 
         inputs, outputs = self._parse_deps_from_vdf(asset.path)
         inputs = self._convert_relpaths(asset.path.parent, inputs)
-        outputs = self._convert_relpaths(dest_root.joinpath(gamedir, 'models'), outputs)
+        outputs = self._convert_relpaths(self.env.game.joinpath(gamedir, 'models'), outputs)
 
         extra = set()
         for f in outputs:

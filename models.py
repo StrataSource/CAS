@@ -17,22 +17,37 @@ class BuildEnvironment():
     def __init__(self, path: str, config: dict):
         self.config = ConfigurationManager(path, config)
 
+        self.build_type = self.config['args.build_type']
+        self.build_category = self.config['args.build_category']
+
         self.verbose = self.config['args.verbose']
         
         self.root = self.config['path.root']
         self.content = self.config['path.content']
         self.game = self.config['path.game']
+        self.src = self.config['path.src']
+
+        self.platform = utilities.resolve_platform_name()
 
         self._setup_bindir()
 
     def _setup_bindir(self):
-        self.bindir = os.path.join(self.root, self.game, 'bin', utilities.get_platform_bindir())
-        if not os.path.exists(self.bindir):
+        self.bindir = self.game.joinpath('bin', self.platform)
+        if not self.bindir.exists():
             raise Exception('Could not find the bin directory')
         logging.debug(f'using bin directory {self.bindir}')
 
-    def get_tool(self, tool: str):
-        return os.path.join(self.bindir, tool)
+    """
+    Retrieves the absolute path to the tool at the specified source path.
+    If the source path is None, it will default to self.bindir.
+    """
+    def get_tool(self, tool: str, src: Path = None) -> Path:
+        if src is None:
+            src = self.bindir
+        assert not tool.endswith('.exe')
+        if sys.platform == 'win32':
+            tool += '.exe'
+        return src.joinpath(tool).resolve()
 
     def run_tool(self, *args, **kwargs) -> int:
         predef = {}
@@ -41,7 +56,7 @@ class BuildEnvironment():
         predef['stderr'] = subprocess.STDOUT
         
         predef['env'] = {}
-        predef['env']['VPROJECT'] = self.config['path.vproject']
+        predef['env']['VPROJECT'] = str(self.config['path.vproject'])
 
         result = subprocess.run(*args, **dict(predef, **kwargs))
         return result.returncode
