@@ -107,7 +107,7 @@ class Builder():
 
     def _run_asset_build(self) -> bool:
         contexts = []
-        for entry in self.env.config['assets']:
+        for entry in list(self.env.config['assets']):
             contexts.append(self._load_asset_context(entry))
 
         hash_inputs = {}
