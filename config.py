@@ -38,7 +38,7 @@ class ConfigurationManager():
 
     def __getitem__(self, key):
         result = None
-        if key in ('assets', 'subsystems', 'args'):
+        if key in ('assets', 'subsystems', 'args', 'defaults'):
             result = self._config[key]
         elif key.startswith('args.'):
             result = self._config['args'].get(key[5:])

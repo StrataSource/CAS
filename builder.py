@@ -107,6 +107,8 @@ class Builder():
         return context
 
     def _run_asset_build(self) -> bool:
+        logging.info('running asset build')
+
         contexts = []
         for entry in list(self.env.config['assets']):
             contexts.append(self._load_asset_context(entry))
@@ -208,46 +210,35 @@ class Builder():
         return True
 
 
-    def _run_subsystems(self) -> bool:
+    def _run_subsystem(self, name: str) -> bool:
         if self.dry_run:
             return True
 
-        whitelist = self.args['include_subsystems']
-        blacklist = self.args['exclude_subsystems']
-        if whitelist:
-            whitelist = whitelist.split(',')
-        if blacklist:
-            blacklist = blacklist.split(',')
-        
-        # load
-        for k, v in self.env.config['subsystems'].items():
-            if whitelist and not k in whitelist:
-                logging.debug(f'subsystem {k} skipped (not whitelisted)')
-                continue
-            if blacklist and k in blacklist:
-                logging.debug(f'subsystem {k} skipped (blacklisted)')
-                continue
+        subsystem = self.env.config['subsystems'].get(name)
+        if not subsystem:
+            return True
 
-            category = v.get('category')
-            if self.env.build_category and category and category != self.env.build_category:
-                logging.debug(f'subsystem {k} skipped (category mismatch)')
-                continue
-            self._load_subsystem(k, v['module'], v.get('options', {}))
+        category = subsystem.get('category')
+        if self.env.build_category and category and category != self.env.build_category:
+            logging.debug(f'subsystem {name} skipped (category mismatch)')
+            return True
+        self._load_subsystem(name, subsystem['module'], subsystem.get('options', {}))
         
         # run
-        for name, sys in self._subsystems.items():
-            logging.info(f'running subsystem {name}')
-            if self.args['clean']:
-                if not sys.clean():
-                    return False
-            else:
-                if not sys.build():
-                    return False
+        sys = self._subsystems[name]
+        logging.info(f'running subsystem {name}')
+        if self.args['clean']:
+            if not sys.clean():
+                return False
+        else:
+            if not sys.build():
+                return False
         return True
 
 
     def build(self) -> bool:
         logging.debug(f'build starting with arguments: {self.args}')
+        self.cache.load()
 
         # skip asset build if we specify a different category explicitly
         skip_assets = self.args['skip_assets']
@@ -255,11 +246,44 @@ class Builder():
             logging.debug('asset build skipped (category mismatch)')
             skip_assets = True
 
-        self.cache.load()
-        if not skip_assets and not self._run_asset_build():
-            logging.error('Asset build phase failed')
-            return False
-        if not self._run_subsystems():
-            logging.error('Subsystem build phase failed')
-            return False
+        # build wl/bl
+        whitelist = self.args['include_subsystems']
+        blacklist = self.args['exclude_subsystems']
+        if whitelist:
+            whitelist = whitelist.split(',')
+        if blacklist:
+            blacklist = blacklist.split(',')
+
+        # build the build order
+        build_order = self.env.config['defaults'].get('build_order')
+
+        # in case there is none, use a sensible default
+        if build_order is None:
+            build_order = ['ast:all']
+            for k in list(self.env.config['subsystems'].keys()):
+                build_order.append(f'sub:{k}')
+
+        for item in build_order:
+            spl = item.split(':')
+            if len(spl) != 2:
+                raise Exception(f'malformed build phase string \"{item}\"')
+
+            key = spl[0]
+            value = spl[1]
+            if key == 'ast':
+                if not skip_assets and not self._run_asset_build():
+                    logging.error('Asset build phase failed')
+                    return False
+            elif key == 'sub':
+                if whitelist and not value in whitelist:
+                    logging.debug(f'subsystem {value} skipped (not whitelisted)')
+                    continue
+                if blacklist and value in blacklist:
+                    logging.debug(f'subsystem {value} skipped (blacklisted)')
+                    continue
+                self._run_subsystem(value)
+            else:
+                raise Exception(f'unknown build phase type \"{key}\"')
+
+        
         return True
