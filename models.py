@@ -55,7 +55,7 @@ class BuildEnvironment():
             predef['stdout'] = subprocess.DEVNULL
         predef['stderr'] = subprocess.STDOUT
         
-        predef['env'] = {}
+        predef['env'] = os.environ
         predef['env']['VPROJECT'] = str(self.config['path.vproject'])
 
         result = subprocess.run(*args, **dict(predef, **kwargs))

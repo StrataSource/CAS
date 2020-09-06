@@ -5,6 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 import assetbuilder.builder
 import assetbuilder.utilities as utilities
+import ast
 import json
 import argparse
 import logging
@@ -80,11 +81,22 @@ if __name__ == '__main__':
         assert x.count('=') <= 1, 'invalid key-value operator'
         if '=' in x:
             spl = x.split('=', 1)
-            utilities.set_dot_notation(config, spl[0], spl[1])
+            val = spl[1]
+            literal = val.lower()
+
+            # evaluate boolean expressions
+            if literal == 'true':
+                val = True
+            elif literal == 'false':
+                val = False
+
+            utilities.set_dot_notation(config, spl[0], val)
         else:
             utilities.set_dot_notation(config, x, True)
 
     config['args'] = {**config.get('args', {}), **vars(args)}
+    config['args']['cli'] = True
+
     builder = assetbuilder.builder.Builder(root_path, config)
     if not builder.build():
         exit(1)

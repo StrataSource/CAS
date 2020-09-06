@@ -47,7 +47,8 @@ class Builder():
         self.cache = AssetCache(path)
 
         self.args = self.env.config.get('args', {})
-        self.dryrun = self.args.get('dry_run', False)
+        self.dry_run = self.args.get('dry_run', False)
+        self.show_status = self.args.get('cli', False)
 
     def _load_subsystem(self, name: str, module: str, config: dict) -> BuildSubsystem:
         subsystem = self._subsystems.get(module)
@@ -159,7 +160,7 @@ class Builder():
         logging.info(f'{len(hash_outputs)} output files')
         logging.info(f'{total_build} assets total will be rebuilt')
 
-        if self.dryrun or total_build == 0:
+        if self.dry_run or total_build == 0:
             return True
 
         # build
@@ -208,7 +209,7 @@ class Builder():
 
 
     def _run_subsystems(self) -> bool:
-        if self.dryrun:
+        if self.dry_run:
             return True
 
         whitelist = self.args['include_subsystems']
