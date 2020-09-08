@@ -7,6 +7,9 @@ import logging
 
 import tqdm
 
+from pathlib import Path
+from typing import List
+
 class TqdmLoggingHandler(logging.Handler):
     def __init__(self, level=logging.NOTSET):
         super().__init__(level)
@@ -20,6 +23,74 @@ class TqdmLoggingHandler(logging.Handler):
             raise
         except:
             self.handleError(record)
+
+
+def relative_paths(paths: list, root: Path) -> List[str]:
+    """
+    Normalises paths from incoming configuration and ensures
+    they are all strings relative to root
+    """
+    result = []
+    for path in paths:
+        # more hacks for exclusions I'm not happy about
+        # maybe we should subclass Path to make this cleaner?
+        exclusion = path.startswith('!')
+        if exclusion:
+            path = path[1:]
+
+        # make sure paths are relative!
+        if isinstance(path, Path):
+            inp = str(path.relative_to(root))
+        elif isinstance(path, str):
+            inp = path
+            if os.path.isabs(path):
+                inp = os.path.relpath(path, root)
+        else:
+            raise NotImplementedError()
+
+        if exclusion:
+            inp = '!' + inp
+        result.append(inp)
+    return result
+
+
+def rglob_invert(patterns: List[str]) -> List[str]:
+    """
+    Inverts a rglob condition.
+    """
+    result = []
+    for pattern in patterns:
+        if pattern.startswith('!'):
+            result.append(pattern[1:])
+        else:
+            assert '!' not in pattern
+            result.append('!' + pattern)
+    return result
+
+
+def rglob_multi(root: Path, patterns: List[str]) -> List[Path]:
+    """
+    Advanced recursive glob of a path collapsing multiple include/exclude patterns.
+    """
+    files = []
+    for pattern in patterns:
+        # patterns starting with ! are treated as exclusions
+        exclusion = pattern.startswith('!')
+        if exclusion:
+            pattern = pattern[1:]
+
+        for path in root.rglob(pattern):
+            if not path.is_file():
+                continue
+            if exclusion:
+                if path in files:
+                    files.remove(path)
+            else:
+                if path in files:
+                    continue
+                files.append(path)
+
+    return files
 
 
 def paths_to_relative(root, paths):

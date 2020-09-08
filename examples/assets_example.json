@@ -1,6 +1,11 @@
 {
     "defaults": {
-        "project": "mymod"
+        "project": "mymod",
+        "build_order": [
+            "ast:all",
+            "sub:fgdbuild",
+            "sub:vpk"
+        ]
     },
     "assets": [
         {
@@ -29,9 +34,8 @@
     "subsystems": {
         "fgdbuild": {
             "module": "assetbuilder.subsystems.fgdbuild",
-            "category": "assets",
+            "categories": ["assets"],
             "options": {
-                "gamedir": "mymod",
                 "branch": "P2CE",
                 "source": "$(path.content)/P2CE-FGD",
                 "dest": "$(path.game)"
@@ -39,50 +43,59 @@
         },
         "vpk": {
             "module": "assetbuilder.subsystems.vpk",
-            "@condition": "R('args.build_type') != 'trunk'",
+            "categories": ["assets", "publish"],
+            "@conditions": ["config('args.build_type') != 'trunk'"],
             "options": {
                 "packfiles": [
                     {
                         "prefix": "pak01",
-                        "folder": "$(path.project)",
-                        "include": [
+                        "folder": "$(path.game)/mymod",
+                        "files": [
                             "cfg/config_default.cfg",
                             "cfg/moddefaults*.txt",
                             "cfg/modsettings.cfg",
-                            "cfg/mounts.kv",
                             "cfg/*.ekv",
                             "expressions/**/*",
                             "maps/**/*",
                             "materials/**/*",
+                            "media/**/*",
                             "models/**/*",
                             "panorama/**/*",
                             "particles/**/*",
                             "resource/**/*",
                             "scenes/**/*",
                             "scripts/**/*",
-                            "sound/**/*"
-                        ],
-                        "exclude": [
-                            "*.ain"
+                            "sound/**/*",
+                            "!*.ain"
                         ]
                     },
                     {
                         "prefix": "pak01",
-                        "folder": "platform",
-                        "include": ["*"],
-                        "exclude": [
-                            "config/**/*",
-                            "resource/**/*",
-                            "shaders/**/*"
+                        "folder": "$(path.game)/platform",
+                        "files": [
+                            "**/*",
+                            "!config/**/*",
+                            "!resource/**/*",
+                            "!shaders/**/*"
                         ]
                     },
                     {
                         "prefix": "pak01",
-                        "folder": "hammer",
-                        "include": ["*"]
+                        "folder": "$(path.game)/hammer",
+                        "files": ["**/*"]
                     }
                 ]
             }
+        },
+        "steamworks": {
+            "module": "assetbuilder.subsystems.steamworks",
+            "categories": ["publish"],
+            "options": {
+                "tooldir": "$(path.devtools)/buildsys/steam/contentbuilder",
+                "appid": 440000
+            },
+
+            "@conditions": ["config('args.build_type') != 'trunk'"]
         }
     }
 }

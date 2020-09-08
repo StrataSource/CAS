@@ -31,24 +31,37 @@ An example of a subsystem is `vpk` - this allows packing several files into one 
 ### Build Types and Categories
 The **build type** (`--build-type`) selects the type of the build you want to perform. This may be one of three values: trunk, staging, or release, and mirrors a multi-branch Git philosophy. The behaviour of this differs depending on the asset or subsystem implementation.
 
-The **build category** (`--build-category`) defines whether assets should be built and what subsystems should run, if any. The default is to build all categories if one is not explicitly specified. If a category different from `assets` is specified, assets will not be built. The category of a subsystem can be defined with the `category` key.
+The **build categories** (`--build-categories`) define whether assets should be built and what subsystems should run, if any. The default is to build all categories if one is not explicitly specified. If a category different from `assets` is specified, assets will not be built. The categories of a subsystem can be defined with the `categories` key.
 
-### Conditional Statements
+### Expressions and Conditions
 AssetBuilder has support for conditional statements to include or exclude segments of configuration whenever a condition is met.
 
 Specify the conditions inside the block you want to set as a list with the special `@conditions` key.
-Inside, you may use Python expression syntax. The `R(x)` function can be used to insert a global into the statement.
+Inside, you may use Python expression syntax.
+
+There are three special functions you can use to retrieve data for use in expressions:
+- `context(key, default)`: gets the value of the a key in the current build context
+- `config(key, default)`: gets the value of a key in the global configuration store
+- `parent(key, default)`: gets the value of a key in the same configuration block
+
+AssetBuilder also has support for custom expressions with `@expressions`, to dynamically modify parts of configuration on the fly. Specify this as a set with each key you want to modify. It uses the same syntax as conditions.
 
 Example:
 ```json
-{
-    "prefix": "pak01",
-    "folder": "hammer",
-    "include": ["*"],
+"module": "assetbuilder.subsystems.syncfolder",
+"category": "publish",
+"options": {
+    "from": "$(path.root)/game",
+    "to": "$(path.root)/publish.tmp",
 
-    "@conditions": ["R('args.build_type') != 'trunk'"]
+    "create": true,
+    "files": [ "!.git" ],
+
+    "@conditions": ["config('args.build_type') != 'trunk'"]
 }
 ```
+
+Note that expressions are always evaluated before conditions in the same block.
 
 ### Globals
 There is a limited set of globals you can reference in conditional statements (with `R('foo.bar')`) and strings (with `$(foo.bar)`).

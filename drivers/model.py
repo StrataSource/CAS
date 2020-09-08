@@ -1,5 +1,5 @@
 from assetbuilder.models import (
-    BuildEnvironment, BuildContext, Asset, SerialDriver, PrecompileResult
+    BuildEnvironment, Asset, AssetBuildContext, SerialDriver, PrecompileResult
 )
 from typing import List, Set
 from pathlib import Path
@@ -53,7 +53,7 @@ class ModelDriver(SerialDriver):
             result.add(root.joinpath(path))
         return result
 
-    def precompile(self, context: BuildContext, asset: Asset) -> List[str]:
+    def precompile(self, context: AssetBuildContext, asset: Asset) -> List[str]:
         # TODO: perhaps we should have another way of doing this rather than jankily "autodetecting" the dest
         gamedir = os.path.relpath(asset.path.parent, self.env.root)
         gamedir = gamedir.replace('\\', '/').split('/')[1]
@@ -72,7 +72,7 @@ class ModelDriver(SerialDriver):
         inputs.add(asset.path)
         return PrecompileResult(inputs, outputs | extra)
 
-    def compile(self, context: BuildContext, asset: Asset) -> bool:
+    def compile(self, context: AssetBuildContext, asset: Asset) -> bool:
         args = [self.tool, str(asset.path)]
 
         returncode = self.env.run_tool(args)

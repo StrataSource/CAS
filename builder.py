@@ -1,4 +1,4 @@
-from assetbuilder.models import BuildEnvironment, BuildContext, BuildSubsystem, Asset, BaseDriver, SerialDriver, BatchedDriver
+from assetbuilder.models import BuildEnvironment, BuildSubsystem, Asset, AssetBuildContext, BaseDriver, SerialDriver, BatchedDriver
 from assetbuilder.cache import AssetCache
 import assetbuilder.utilities
 
@@ -11,12 +11,14 @@ import pathlib
 import signal
 import os
 
+from dotmap import DotMap
+
 logger = None
 def _async_mod_init():
     global logger
     logger = multiprocessing.log_to_stderr(logging.INFO)
 
-def _run_async_serial(driver: SerialDriver, context: BuildContext, asset: Asset) -> bool:
+def _run_async_serial(driver: SerialDriver, context: AssetBuildContext, asset: Asset) -> bool:
     relpath = os.path.relpath(asset.path, driver.env.root)
 
     context.logger = logger
@@ -28,7 +30,7 @@ def _run_async_serial(driver: SerialDriver, context: BuildContext, asset: Asset)
         context.logger.error(f'  Failed compile {str(relpath)}')
     return success
 
-def _run_async_batched(driver: BatchedDriver, context: BuildContext, assets: List[Asset]) -> bool:
+def _run_async_batched(driver: BatchedDriver, context: AssetBuildContext, assets: List[Asset]) -> bool:
     context.logger = logger
     for asset in assets:
         relpath = os.path.relpath(asset.path, driver.env.root)
@@ -77,7 +79,7 @@ class Builder():
         self._drivers[name] = driver
         return driver
 
-    def _load_asset_context(self, config: dict) -> List[Asset]:
+    def _load_asset_context(self, config: dict) -> AssetBuildContext:
         if 'src' in config:
             srcpath = Path(config['src'])
         else:
@@ -101,12 +103,12 @@ class Builder():
                 files.append(path)
 
         # create context and add assets
-        context = BuildContext(config)
+        context = AssetBuildContext(config)
         for f in files:
             context.assets.append(Asset(f, {}))
         return context
 
-    def _run_asset_build(self) -> bool:
+    def _run_asset_build(self, ctx: dict) -> bool:
         logging.info('running asset build')
 
         contexts = []
@@ -210,18 +212,22 @@ class Builder():
         return True
 
 
-    def _run_subsystem(self, name: str) -> bool:
+    def _run_subsystem(self, ctx: dict, name: str) -> bool:
         if self.dry_run:
             return True
 
-        subsystem = self.env.config['subsystems'].get(name)
+        # get the unresolved configuration first to run checks
+        subsystem = self.env.config.get('subsystems', None, None).get(name, None)
         if not subsystem:
             return True
-
-        category = subsystem.get('category')
-        if self.env.build_category and category and category != self.env.build_category:
+        
+        categories = subsystem.get('categories')
+        if self.env.build_categories and categories and len(self.env.build_categories.intersection(set(categories))) == 0:
             logging.debug(f'subsystem {name} skipped (category mismatch)')
             return True
+
+        # get the full configuration
+        subsystem = self.env.config.resolve(subsystem, ctx)
         self._load_subsystem(name, subsystem['module'], subsystem.get('options', {}))
         
         # run
@@ -231,7 +237,9 @@ class Builder():
             if not sys.clean():
                 return False
         else:
-            if not sys.build():
+            result = sys.build()
+            ctx[f'results.subsystems.{name}'] = result
+            if not result.success:
                 return False
         return True
 
@@ -242,7 +250,7 @@ class Builder():
 
         # skip asset build if we specify a different category explicitly
         skip_assets = self.args['skip_assets']
-        if self.env.build_category is not None and self.env.build_category != 'assets':
+        if self.env.build_categories is not None and not 'assets' in self.env.build_categories:
             logging.debug('asset build skipped (category mismatch)')
             skip_assets = True
 
@@ -263,6 +271,9 @@ class Builder():
             for k in list(self.env.config['subsystems'].keys()):
                 build_order.append(f'sub:{k}')
 
+        # create the context
+        ctx = DotMap()
+
         for item in build_order:
             spl = item.split(':')
             if len(spl) != 2:
@@ -271,7 +282,7 @@ class Builder():
             key = spl[0]
             value = spl[1]
             if key == 'ast':
-                if not skip_assets and not self._run_asset_build():
+                if not skip_assets and not self._run_asset_build(ctx):
                     logging.error('Asset build phase failed')
                     return False
             elif key == 'sub':
@@ -281,7 +292,8 @@ class Builder():
                 if blacklist and value in blacklist:
                     logging.debug(f'subsystem {value} skipped (blacklisted)')
                     continue
-                self._run_subsystem(value)
+                if not self._run_subsystem(ctx, value):
+                    return False
             else:
                 raise Exception(f'unknown build phase type \"{key}\"')
 

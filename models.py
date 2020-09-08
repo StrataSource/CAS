@@ -18,7 +18,12 @@ class BuildEnvironment():
         self.config = ConfigurationManager(path, config)
 
         self.build_type = self.config['args.build_type']
-        self.build_category = self.config['args.build_category']
+        self.build_categories = None
+
+        categories = self.config['args.build_categories']
+        if categories:
+            categories = categories.split(',')
+        self.build_categories = frozenset(categories)
 
         self.verbose = self.config['args.verbose']
         
@@ -62,7 +67,7 @@ class BuildEnvironment():
         return result.returncode
 
 
-class BuildContext():
+class AssetBuildContext():
     """
     A collection of assets with shared configuration
     """
@@ -70,6 +75,15 @@ class BuildContext():
         self.assets = []
         self.buildable = []
         self.config = config
+
+
+class BuildResult():
+    """
+    Represents a result returned from a subsystem
+    """
+    def __init__(self, success: bool, outputs: dict = {}):
+        self.success = success
+        self.outputs = outputs
 
 
 class BuildSubsystem():
@@ -80,10 +94,10 @@ class BuildSubsystem():
         self.env = env
         self.config = config
     
-    def build(self) -> bool:
+    def build(self) -> BuildResult:
         """
         Invokes the build logic of the subsystem.
-        Returns True if success, otherwise False.
+        Returns a BuildResult with the result.
         """
         raise NotImplementedError()
     
@@ -129,7 +143,7 @@ class BaseDriver():
     def _tool_name(self):
         raise NotImplementedError()
     
-    def precompile(self, context: BuildContext, asset: Asset) -> PrecompileResult:
+    def precompile(self, context: AssetBuildContext, asset: Asset) -> PrecompileResult:
         """
         Checks to ensure all required files are present
         Returns a list of source and output files to be hashed, or None if failure
@@ -138,7 +152,7 @@ class BaseDriver():
 
 
 class SerialDriver(BaseDriver):
-    def compile(self, context: BuildContext, asset: Asset) -> bool:
+    def compile(self, context: AssetBuildContext, asset: Asset) -> bool:
         """
         Performs the compile
         Returns True if success, otherwise False.
@@ -147,7 +161,7 @@ class SerialDriver(BaseDriver):
 
 
 class BatchedDriver(BaseDriver):
-    def compile_all(self, context: BuildContext, assets: List[Asset]) -> bool:
+    def compile_all(self, context: AssetBuildContext, assets: List[Asset]) -> bool:
         """
         Performs the compile
         Returns True if success, otherwise False.

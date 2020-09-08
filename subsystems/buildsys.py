@@ -1,4 +1,4 @@
-from assetbuilder.models import BuildSubsystem, BuildEnvironment
+from assetbuilder.models import BuildResult, BuildSubsystem, BuildEnvironment
 
 from typing import List, Dict
 from pathlib import Path
@@ -164,14 +164,14 @@ class BuildsysSubsystem(BuildSubsystem):
         compiler = self._get_platform_compiler()
         return compiler.build(self._get_project_name())
 
-    def build(self) -> bool:
+    def build(self) -> BuildResult:
         if self.config.get('build_vpc', True):
             if not self._build_vpc():
-                return False
+                return BuildResult(False)
         if self.config.get('build_code', False):
             if not self._build_code():
-                return False
-        return True
+                return BuildResult(False)
+        return BuildResult(True)
     
     def clean(self) -> bool:
         # clean output files before we delete project files!

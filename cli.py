@@ -39,15 +39,15 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--threads', type=int, default=multiprocessing.cpu_count(), help='Number of threads to use to build assets. Defaults to the number of CPUs on the system.')
     parser.add_argument('-c', '--clean', action='store_true', help='Cleans the build environment.')
     parser.add_argument('-b', '--build-type', type=str.lower, choices=['trunk', 'staging', 'release'], default='trunk', help='The type of the build.')
-    parser.add_argument('-g', '--build-category', type=str.lower, help='The category of the build. If not specified, all categories will be assumed.')
+    parser.add_argument('-g', '--build-categories', type=str.lower, help='Comma-seperated list of categories to include in the build. If not specified, all categories will be assumed.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Write verbose output for debugging.')
     parser.add_argument('-d', '--dry-run', action='store_true', help='Prints the arguments that would be passed to VPC and exits.')
 
     parser.add_argument('-o', '--override', action='append', help='Overrides the configuration path specified by x.')
 
     parser.add_argument('--skip-assets', action='store_true', help='Skips building assets.')
-    parser.add_argument('--include-subsystems', type=str, help='Comma-seperated list of subsystems to include in the build.')
-    parser.add_argument('--exclude-subsystems', type=str, help='Comma-seperated list of subsystems to exclude from the build.')
+    parser.add_argument('--include-subsystems', type=str.lower, help='Comma-seperated list of subsystems to include in the build.')
+    parser.add_argument('--exclude-subsystems', type=str.lower, help='Comma-seperated list of subsystems to exclude from the build.')
 
     args = parser.parse_args()
     if args.verbose:

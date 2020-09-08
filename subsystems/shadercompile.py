@@ -1,4 +1,4 @@
-from assetbuilder.models import BuildSubsystem
+from assetbuilder.models import BuildResult, BuildSubsystem
 from typing import List
 from pathlib import Path
 
@@ -8,8 +8,8 @@ import hashlib
 import logging
 
 class ShaderCompileSubsystem(BuildSubsystem):
-    def build(self) -> bool:
-        return True
+    def build(self) -> BuildResult:
+        return BuildResult(True)
 
     def clean(self) -> bool:
         return True

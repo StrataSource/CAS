@@ -1,5 +1,5 @@
 from assetbuilder.models import (
-    BuildEnvironment, BuildContext, Asset, BatchedDriver, PrecompileResult
+    BuildEnvironment, Asset, AssetBuildContext, BatchedDriver, PrecompileResult
 )
 from typing import List
 from pathlib import Path
@@ -17,11 +17,11 @@ class ViceDriver(BatchedDriver):
     def _tool_name(self):
         return 'vice'
 
-    def precompile(self, context: BuildContext, asset: Asset) -> List[str]:
+    def precompile(self, context: AssetBuildContext, asset: Asset) -> List[str]:
         asset.outpath = asset.path.with_suffix('.ekv')
         return PrecompileResult([asset.path], [asset.outpath])
 
-    def compile_all(self, context: BuildContext, assets: List[Asset]) -> bool:
+    def compile_all(self, context: AssetBuildContext, assets: List[Asset]) -> bool:
         key = context.config['options']['key']
         if len(key) != 8:
             raise Exception('ICE key must be exactly 8 characters long')
