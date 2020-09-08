@@ -29,7 +29,6 @@ class SyncFolderSubsystem(BuildSubsystem):
         if not to_dir.exists():
             to_dir.mkdir()
 
-        print(self.config.get('files', []))
         files = utilities.rglob_multi(from_dir, self.config.get('files', []))
         logging.debug(str(len(files)) + f' file(s) to copy')
 
