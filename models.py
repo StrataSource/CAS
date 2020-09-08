@@ -23,7 +23,7 @@ class BuildEnvironment():
         categories = self.config['args.build_categories']
         if categories:
             categories = categories.split(',')
-        self.build_categories = frozenset(categories)
+            self.build_categories = frozenset(categories)
 
         self.verbose = self.config['args.verbose']
         

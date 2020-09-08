@@ -162,6 +162,12 @@ class BuildsysSubsystem(BuildSubsystem):
 
     def _build_code(self) -> bool:
         compiler = self._get_platform_compiler()
+
+        # force clean for staging/release
+        if self.env.build_type != 'trunk' and not compiler.clean(self._get_project_name()):
+            logging.error('Mandatory clean for staging/release builds failed!')
+            return False
+        
         return compiler.build(self._get_project_name())
 
     def build(self) -> BuildResult:
