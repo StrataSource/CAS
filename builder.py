@@ -220,7 +220,12 @@ class Builder():
         subsystem = self.env.config.get('subsystems', None, None).get(name, None)
         if not subsystem:
             return True
-        
+
+        build_types = subsystem.get('build_types')
+        if build_types and not self.env.build_type in build_types:
+            logging.debug(f'subsystem {name} skipped (build type mismatch)')
+            return True
+
         categories = subsystem.get('categories')
         if self.env.build_categories and categories and len(self.env.build_categories.intersection(set(categories))) == 0:
             logging.debug(f'subsystem {name} skipped (category mismatch)')

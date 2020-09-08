@@ -35,6 +35,7 @@
         "fgdbuild": {
             "module": "assetbuilder.subsystems.fgdbuild",
             "categories": ["assets"],
+
             "options": {
                 "branch": "P2CE",
                 "source": "$(path.content)/P2CE-FGD",
@@ -43,8 +44,9 @@
         },
         "vpk": {
             "module": "assetbuilder.subsystems.vpk",
+            "build_types": ["staging", "release"],
             "categories": ["assets", "publish"],
-            "@conditions": ["config('args.build_type') != 'trunk'"],
+
             "options": {
                 "packfiles": [
                     {
@@ -89,13 +91,13 @@
         },
         "steamworks": {
             "module": "assetbuilder.subsystems.steamworks",
+            "build_types": ["staging", "release"],
             "categories": ["publish"],
+
             "options": {
                 "tooldir": "$(path.devtools)/buildsys/steam/contentbuilder",
                 "appid": 440000
-            },
-
-            "@conditions": ["config('args.build_type') != 'trunk'"]
+            }
         }
     }
 }
