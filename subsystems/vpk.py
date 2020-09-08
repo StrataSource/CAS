@@ -12,11 +12,12 @@ import logging
 import vdf
 
 class VPKArchive():
-    def __init__(self, sys: BuildSubsystem, prefix: str, root: Path, files: List[Path]):
+    def __init__(self, sys: BuildSubsystem, prefix: str, input_path: Path, output_path: Path, files: List[Path]):
         self.sys = sys
-        self.root = root
-        self.files = files
         self.prefix = prefix
+        self.input_path = input_path
+        self.output_path = output_path
+        self.files = files
 
     def _md5_file(self, path: str):
         hash = hashlib.md5()
@@ -35,7 +36,7 @@ class VPKArchive():
             if f.name == output.name or f.name == f'{output.name}.bak' or f.suffix == '.vpk':
                 continue
 
-            rel = str(os.path.relpath(f, self.root)).replace('\\', '/')
+            rel = str(os.path.relpath(f, self.input_path)).replace('\\', '/')
             entries[rel] = {
                 'destpath': rel,
                 'md5': self._md5_file(str(f))
@@ -47,16 +48,17 @@ class VPKArchive():
             vdf.dump(res, f, pretty=True)
 
     def pack(self) -> bool:
-        cfile_path = self.root.joinpath(f'control_{self.prefix}.vdf')
+        vpk_path = self.output_path.joinpath(f'{self.prefix}_dir.vpk')
+        cfile_path = self.output_path.joinpath(f'control_{self.prefix}.vdf')
         self._gen_control_file(cfile_path, self.files)
 
         args = [str(self.sys.env.get_tool('vpk')), '-M', '-P']
         keypair = self.sys.config.get('keypair')
         if keypair:
             args.extend(['-K', keypair['private'].replace('\\', '/'), '-k', keypair['public'].replace('\\', '/')])
-        args.extend(['k', f'{self.prefix}_dir.vpk', cfile_path])
+        args.extend(['k', vpk_path, cfile_path])
 
-        returncode = self.sys.env.run_tool(args, cwd=self.root)
+        returncode = self.sys.env.run_tool(args, cwd=self.input_path)
         if returncode != 0:
             return False
         
@@ -80,14 +82,22 @@ class VPKBuildSubsystem(BuildSubsystem):
         prefix = config['prefix']
 
         files = set()
-        assetpath = Path(config['folder']).resolve()
+        input_path = Path(config['input']).resolve()
+        output_path = config.get('output')
+        if output_path:
+            output_path = Path(output_path).resolve()
+        else:
+            output_path = input_path
 
-        files = utilities.rglob_multi(assetpath, config.get('files', []))
+        assert input_path.exists()
+        assert output_path.exists()
+
+        files = utilities.rglob_multi(input_path, config.get('files', []))
         if len(files) == 0:
             logging.warning('VPK: No files to pack!')
             return
 
-        return VPKArchive(self, prefix, assetpath, files)
+        return VPKArchive(self, prefix, input_path, output_path, files)
 
     def build(self) -> BuildResult:
         outputs = {'files': []}
@@ -104,7 +114,7 @@ class VPKBuildSubsystem(BuildSubsystem):
                 exclude = entry.startswith('!')
                 if exclude:
                     entry = entry[1:]
-                entry = os.path.join(vpk.root, entry)
+                entry = os.path.join(vpk.input_path, entry)
                 if exclude:
                     entry = '!' + entry
                 outputs['files'].append(entry)
@@ -113,11 +123,18 @@ class VPKBuildSubsystem(BuildSubsystem):
 
     def clean(self) -> bool:
         for vpk in self.config['packfiles']:
-            fpath = self.env.game.joinpath(vpk['folder'])
-            for path in fpath.rglob(vpk['prefix'] + '*.vpk'):
+            # dupe code here, fix
+            input_path = Path(vpk['input']).resolve()
+            output_path = vpk.get('output')
+            if output_path:
+                output_path = Path(output_path).resolve()
+            else:
+                output_path = input_path
+            
+            for path in output_path.rglob(vpk['prefix'] + '*.vpk'):
                 path.unlink()
 
-            ctl = fpath.joinpath('control_' + vpk['prefix'] + '.vdf')
+            ctl = output_path.joinpath('control_' + vpk['prefix'] + '.vdf')
             if ctl.exists():
                 ctl.unlink()
             
