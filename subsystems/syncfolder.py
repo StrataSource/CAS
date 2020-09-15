@@ -41,7 +41,8 @@ class SyncFolderSubsystem(BuildSubsystem):
 
     def clean(self) -> bool:
         to_dir = Path(self.config['to']).resolve()
-        shutil.rmtree(to_dir, onerror=_shutil_delete_force)
+        if to_dir.exists():
+            shutil.rmtree(to_dir, onerror=_shutil_delete_force)
         return True
 
 _subsystem = SyncFolderSubsystem
