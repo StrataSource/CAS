@@ -1,6 +1,8 @@
 {
     "defaults": {
         "project": "mymod",
+        "bin_appid": 440000,
+
         "build_order": [
             "ast:all",
             "sub:fgdbuild",

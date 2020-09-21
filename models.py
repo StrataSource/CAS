@@ -1,4 +1,5 @@
 import assetbuilder.utilities as utilities
+from assetbuilder.common.steamtools import SteamInstance, SteamApp
 from assetbuilder.config import ConfigurationManager
 
 from typing import List, Set
@@ -33,13 +34,35 @@ class BuildEnvironment():
         self.src = self.config['path.src']
 
         self.platform = utilities.resolve_platform_name()
+        self.steam = None
 
         self._setup_bindir()
 
+    def _get_appid_folder(self, appid: int) -> Path:
+        if not self.steam:
+            self.steam = SteamInstance()
+        for app in self.steam.apps:
+            if app.appid == appid:
+                return app.path
+        return None
+
     def _setup_bindir(self):
         self.bindir = self.game.joinpath('bin', self.platform)
+        override = self.config['defaults'].get('bin_path')
+
+        # we have a bin path override
+        if override is not None:
+            self.bindir = Path(override)
+        # we're a mod (modwrapper present but no game executable) - autodetect bin path from appid
+        elif self.bindir.exists() and not self.get_tool('chaos').exists() and self.get_tool('modwrapper').exists():
+            appid = self.config['defaults'].get('bin_appid')
+            if appid is not None:
+                logging.debug(f'mod detected - using base appid {appid}')
+                self.bindir = self._get_appid_folder(appid).joinpath('bin', self.platform)
+
         if not self.bindir.exists():
             raise Exception('Could not find the bin directory')
+
         logging.debug(f'using bin directory {self.bindir}')
 
     """
@@ -53,6 +76,17 @@ class BuildEnvironment():
         if sys.platform == 'win32':
             tool += '.exe'
         return src.joinpath(tool).resolve()
+
+    def get_lib(self, lib: str) -> Path:
+        if sys.platform == 'win32':
+            lib += '.dll'
+        elif sys.platform == 'darwin':
+            lib += '.dylib'
+        elif sys.platform == 'linux':
+            lib += '.so'
+        else:
+            raise NotImplementedError()
+        return self.bindir.joinpath(lib).resolve()
 
     def run_tool(self, *args, **kwargs) -> int:
         predef = {}
