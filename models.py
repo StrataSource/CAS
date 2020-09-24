@@ -52,7 +52,7 @@ class BuildEnvironment():
 
         # we have a bin path override
         if override is not None:
-            self.bindir = Path(override)
+            self.bindir = Path(override).joinpath(self.platform)
         # we're a mod (modwrapper present but no game executable) - autodetect bin path from appid
         elif self.bindir.exists() and not self.get_tool('chaos').exists() and self.get_tool('modwrapper').exists():
             appid = self.config['defaults'].get('bin_appid')
