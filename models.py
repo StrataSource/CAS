@@ -58,7 +58,7 @@ class BuildEnvironment():
             appid = self.config['defaults'].get('bin_appid')
             if appid is not None:
                 logging.debug(f'mod detected - using base appid {appid}')
-                self.bindir = self._get_appid_folder(appid).joinpath('bin', self.platform)
+                self.bindir = self._get_appid_folder(int(appid)).joinpath('bin', self.platform)
 
         if not self.bindir.exists():
             raise Exception('Could not find the bin directory')
