@@ -6,7 +6,8 @@ import uuid
 import logging
 
 import vdf
-import winreg
+if sys.platform == 'win32':
+	import winreg
 
 
 def get_steam_path() -> Path:

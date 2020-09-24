@@ -8,7 +8,8 @@ import sys
 import subprocess
 import hashlib
 import logging
-import winreg
+if sys.platform == 'win32':
+	import winreg
 
 BUILD_TYPE_MAP = {
     'trunk': 'CHAOS_TRUNK_BUILD',
