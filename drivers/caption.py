@@ -18,7 +18,7 @@ class CaptionDriver(SerialDriver):
         return PrecompileResult([asset.path], [asset.outpath])
 
     def compile(self, context: AssetBuildContext, asset: Asset) -> bool:
-        args = [self.tool, str(asset.path)]
+        args = [str(self.tool), str(asset.path)]
 
         returncode = self.env.run_tool(args)
         return returncode == 0

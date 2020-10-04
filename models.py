@@ -98,11 +98,6 @@ class BuildEnvironment():
         
         predef['env'] = os.environ
         predef['env']['VPROJECT'] = str(self.config['path.vproject'])
-
-        if self.verbose:
-            print('args to subprocess: ')
-            pprint.pprint(args)
-            pprint.pprint(dict(predef, **kwargs))
         
         result = subprocess.run(*args, **dict(predef, **kwargs))
         return result.returncode
@@ -179,7 +174,7 @@ class BaseDriver():
         
         self.env = env
         self.config = config
-        self.tool = self.env.get_tool(self._tool_name())
+        self.tool = str(self.env.get_tool(self._tool_name()))
 
     def _tool_name(self):
         raise NotImplementedError()
