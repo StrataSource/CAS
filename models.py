@@ -48,6 +48,18 @@ class BuildEnvironment():
                 return app.path
         return None
 
+    def _check_autodetect_appid(self) -> bool:
+        if not self.bindir.exists():
+            logging.debug('appid autodetect skipped - could not find bindir')
+            return False
+        elif self.get_tool('chaos').exists():
+            logging.debug('appid autodetect skipped - chaos executable exists')
+            return False
+        elif not self.get_tool('modwrapper').exists():
+            logging.debug('appid autodetect skipped - modwrapper executable not found')
+            return False
+        return True
+
     def _setup_bindir(self):
         self.bindir = self.game.joinpath('bin', self.platform)
         override = self.config['defaults'].get('bin_path')
@@ -56,7 +68,7 @@ class BuildEnvironment():
         if override is not None:
             self.bindir = Path(override).joinpath(self.platform)
         # we're a mod (modwrapper present but no game executable) - autodetect bin path from appid
-        elif self.bindir.exists() and not self.get_tool('chaos').exists() and self.get_tool('modwrapper').exists():
+        elif self._check_autodetect_appid():
             appid = self.config['defaults'].get('bin_appid')
             if appid is not None:
                 logging.debug(f'mod detected - using base appid {appid}')
