@@ -52,12 +52,16 @@ class SteamInstance():
         with open(fpath, 'r') as f:
             lib_vdf = vdf.load(f)
 
+        logging.debug('libraryfolders.vdf found')
+
         libraries = []
         folders = lib_vdf['LibraryFolders']
         for k, v in folders.items():
             if not k.isdigit():
                 continue
             libraries.append(Path(v).joinpath('steamapps').resolve())
+
+        logging.debug(f'{len(libraries)} num libraries detected')
 
         apps = []
         for l in libraries:
