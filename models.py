@@ -10,6 +10,7 @@ import uuid
 import json
 import logging
 import subprocess
+import pprint
 
 
 class BuildEnvironment():
@@ -98,7 +99,11 @@ class BuildEnvironment():
         predef['env'] = os.environ
         predef['env']['VPROJECT'] = str(self.config['path.vproject'])
 
-        logging.debug('args to subprocess: ' + json.dumps(args) + json.dumps(dict(predef, **kwargs)))
+        if self.verbose:
+            print('args to subprocess: ')
+            pprint.pprint(args)
+            pprint.pprint(dict(predef, **kwargs))
+        
         result = subprocess.run(*args, **dict(predef, **kwargs))
         return result.returncode
 
