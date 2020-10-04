@@ -46,7 +46,8 @@ class SteamInstance():
         self._load_apps()
     
     def _load_apps(self):
-        fpath = self._path.joinpath('steamapps', 'libraryfolders.vdf')
+        root_apps = self._path.joinpath('steamapps')
+        fpath = root_apps.joinpath('libraryfolders.vdf')
         if not fpath.exists():
             raise Exception('Unable to find libraryfolders.vdf!')
         with open(fpath, 'r') as f:
@@ -61,6 +62,7 @@ class SteamInstance():
                 continue
             libraries.append(Path(v).joinpath('steamapps').resolve())
 
+        libraries.append(root_apps.resolve())
         logging.debug(f'{len(libraries)} num libraries detected')
 
         apps = []
