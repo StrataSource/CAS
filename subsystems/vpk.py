@@ -56,7 +56,7 @@ class VPKArchive():
         keypair = self.sys.config.get('keypair')
         if keypair:
             args.extend(['-K', keypair['private'].replace('\\', '/'), '-k', keypair['public'].replace('\\', '/')])
-        args.extend(['k', vpk_path, cfile_path])
+        args.extend(['k', str(vpk_path), str(cfile_path)])
 
         returncode = self.sys.env.run_tool(args, cwd=self.input_path)
         if returncode != 0:
