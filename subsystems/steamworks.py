@@ -39,15 +39,17 @@ class SteamworksSubsystem(BuildSubsystem):
         else:
             raise NotImplementedError(f'unsupported platform {sys.platform}')
         
-        appid = self.config['appid']
-
-        script = tool_dir.joinpath('scripts', f'app_build_{appid}.vdf')
-        if not script.exists():
-            logging.error(f'Unable to find SteamCMD script at \"{script}\"!')
-            return False
+        script_cmd = []
+        for script in self.config['scripts']:
+            script_file = tool_dir.joinpath('scripts', f'app_build_{script}.vdf')
+            if not script_file.exists():
+                logging.error(f'Unable to find SteamCMD script at \"{script_file}\"!')
+                return False
+            script_cmd.append('+run_app_build_http')
+            script_cmd.append(script_file)
 
         user, pwd = self._get_credentials()
-        args = [tool_path, '+login', user, pwd, '+run_app_build_http', script, '+quit']
+        args = [tool_path, '+login', user, pwd] + script_cmd + ['+quit']
         ret = self.env.run_tool(args, cwd=self.env.src)
         return ret == 0
 
