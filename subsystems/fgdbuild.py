@@ -26,7 +26,11 @@ class FGDBuildSubsystem(BuildSubsystem):
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
 
-        outfile = srcpath.joinpath(f'build/{project}.fgd')
+        build_dest = srcpath.joinpath('build')
+        if not build_dest.exists():
+            build_dest.mkdir()
+
+        outfile = build_dest.joinpath(f'{project}.fgd')
 
         # redirect our output so logs aren't spammed on non-verbose mode
         log_dev = sys.stdout if self.env.verbose else None
