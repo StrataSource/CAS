@@ -3,3 +3,5 @@ dotmap
 dirsync
 tqdm
 vdf
+
+git+https://github.com/TeamSpen210/srctools#egg=srctools
