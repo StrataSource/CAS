@@ -49,15 +49,13 @@ class BuildEnvironment():
         return None
 
     def _check_autodetect_appid(self) -> bool:
-        if not self.bindir.exists():
-            logging.debug('appid autodetect skipped - could not find bindir')
+        if self.src.exists():
+            logging.debug('appid autodetect skipped - src dir exists')
             return False
         elif self.get_tool('chaos').exists():
             logging.debug('appid autodetect skipped - chaos executable exists')
             return False
-        elif not self.get_tool('modwrapper').exists():
-            logging.debug('appid autodetect skipped - modwrapper executable not found')
-            return False
+
         return True
 
     def _setup_bindir(self):
