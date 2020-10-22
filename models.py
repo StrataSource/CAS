@@ -111,7 +111,10 @@ class BuildEnvironment():
         predef['env'] = os.environ
         predef['env']['VPROJECT'] = str(self.config['path.vproject'])
         
-        result = subprocess.run(*args, **dict(predef, **kwargs))
+        try:
+            result = subprocess.run(*args, **dict(predef, **kwargs))
+        except Exception as e:
+            raise Exception(f'failed to execute tool with parameters: {args}') from e
         return result.returncode
 
 
