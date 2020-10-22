@@ -23,9 +23,9 @@ def _resolve_root_path() -> Path:
             # we may have a match, verify we have a valid path
             if Path(os.path.join(root, 'content', 'assets.json')).exists():
                 return Path(root).resolve()
-        root = root.parent
-        if not root:
+        if not root.parent or root.parent == root:
             break
+        root = root.parent
     return None
 
 
