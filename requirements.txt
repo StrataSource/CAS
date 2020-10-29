@@ -1,6 +1,6 @@
+jsonschema
 simpleeval
 dotmap
-dirsync
 tqdm
 vdf
 

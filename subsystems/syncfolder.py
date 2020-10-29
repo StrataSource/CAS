@@ -21,7 +21,7 @@ def _shutil_delete_force(action, name, exc):
 class SyncFolderSubsystem(BuildSubsystem):
     def build(self) -> BuildResult:
         from_dir = Path(self.config['from']).resolve()
-        to_dir = Path(self.config['to']).resolve()
+        to_dir = Path(self.config.to).resolve()
 
         if self.config.get('delete') and to_dir.exists():
             shutil.rmtree(to_dir, onerror=_shutil_delete_force)
@@ -40,7 +40,7 @@ class SyncFolderSubsystem(BuildSubsystem):
         return BuildResult(True)
 
     def clean(self) -> bool:
-        to_dir = Path(self.config['to']).resolve()
+        to_dir = Path(self.config.to).resolve()
         if to_dir.exists():
             shutil.rmtree(to_dir, onerror=_shutil_delete_force)
         return True

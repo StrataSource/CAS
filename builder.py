@@ -217,7 +217,7 @@ class Builder():
             return True
 
         # get the unresolved configuration first to run checks
-        subsystem = self.env.config.get('subsystems', None, None).get(name, None)
+        subsystem = self.env.config.subsystems.get(name)
         if not subsystem:
             return True
 
@@ -232,7 +232,7 @@ class Builder():
             return True
 
         # get the full configuration
-        subsystem = self.env.config.resolve(subsystem, ctx)
+        subsystem = subsystem.with_context(ctx)
         self._load_subsystem(name, subsystem['module'], subsystem.get('options', {}))
         
         # run
@@ -249,6 +249,19 @@ class Builder():
         return True
 
 
+    def _run_subsystems(self, ctx: dict, subsystems: List[str], whitelist: List[str], blacklist: List[str]) -> bool:
+        for sub in subsystems:
+            if whitelist and not sub in whitelist:
+                logging.debug(f'subsystem {sub} skipped (not whitelisted)')
+                continue
+            if blacklist and sub in blacklist:
+                logging.debug(f'subsystem {sub} skipped (blacklisted)')
+                continue
+            if not self._run_subsystem(ctx, sub):
+                return False
+        return True
+
+
     def build(self) -> bool:
         logging.debug(f'build starting with arguments: {self.args}')
         self.cache.load()
@@ -259,6 +272,8 @@ class Builder():
             logging.debug('asset build skipped (category mismatch)')
             skip_assets = True
 
+        subsystems = list(self.env.config['subsystems'].keys())
+
         # build wl/bl
         whitelist = self.args['include_subsystems']
         blacklist = self.args['exclude_subsystems']
@@ -267,40 +282,29 @@ class Builder():
         if blacklist:
             blacklist = blacklist.split(',')
 
-        # build the build order
-        build_order = self.env.config['defaults'].get('build_order')
-
-        # in case there is none, use a sensible default
-        if build_order is None:
-            build_order = ['ast:all']
-            for k in list(self.env.config['subsystems'].keys()):
-                build_order.append(f'sub:{k}')
-
         # create the context
         ctx = DotMap()
 
-        for item in build_order:
-            spl = item.split(':')
-            if len(spl) != 2:
-                raise Exception(f'malformed build phase string \"{item}\"')
-
-            key = spl[0]
-            value = spl[1]
-            if key == 'ast':
-                if not skip_assets and not self._run_asset_build(ctx):
-                    logging.error('Asset build phase failed')
-                    return False
-            elif key == 'sub':
-                if whitelist and not value in whitelist:
-                    logging.debug(f'subsystem {value} skipped (not whitelisted)')
-                    continue
-                if blacklist and value in blacklist:
-                    logging.debug(f'subsystem {value} skipped (blacklisted)')
-                    continue
-                if not self._run_subsystem(ctx, value):
-                    return False
+        # sort subsystems into before/after assets
+        before_subs = []
+        after_subs = []
+        for k, v in self.env.config['subsystems'].items():
+            if v.get('before_assets', False) is True:
+                before_subs.append(k)
             else:
-                raise Exception(f'unknown build phase type \"{key}\"')
+                after_subs.append(k)
 
+        # first pass before assets
+        if not self._run_subsystems(ctx, before_subs, whitelist, blacklist):
+            return False
+
+        # build assets
+        if not skip_assets and not self._run_asset_build(ctx):
+            logging.error('Asset build phase failed')
+            return False
+
+        # second pass after assets
+        if not self._run_subsystems(ctx, after_subs, whitelist, blacklist):
+            return False
         
         return True

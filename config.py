@@ -1,27 +1,34 @@
 import assetbuilder.utilities as utilities
 
-from typing import List, Set
-from pathlib import Path
 import os
 import ast
 import sys
+import copy
+import json
 import logging
 import collections
 from collections.abc import Mapping
+from typing import List, Set
+from pathlib import Path
+
+import simpleeval
+import jsonschema
 from dotmap import DotMap
 
-import json
-import simpleeval
 
 class ConfigurationResolver():
+    """
+    Class that actually does the configuration resolution
+    """
     def __init__(self, data: dict):
         self._data = data
-
-    """
-    A terrible lexical parser for interpolated globals.
-    I.e. "build type: $(args.build)" returns "build type: trunk"
-    """
+    
     def _inject_config_str(self, config: str, literal: bool = False) -> str:
+        """
+        A terrible lexical parser for interpolated globals.
+        I.e. "build type: $(args.build)" returns "build type: trunk"
+        """
+
         prev = None
         inblock = False
         current = ''
@@ -63,11 +70,11 @@ class ConfigurationResolver():
 
         #logging.debug(f'\"{cond}\" evaluated to: {result}')
         return result
-
-    """
-    Resolves the stored configuration into literal terms at runtime
-    """
+    
     def resolve(self, config, context: dict):
+        """
+        Resolves the stored configuration into literal terms at runtime
+        """
         result = config
 
         if isinstance(config, dict) or isinstance(config, Mapping):
@@ -104,30 +111,37 @@ class ConfigurationResolver():
         
         return result
 
+
 class LazyDynamicBase():
     """
     Base object that allows lazy resolution of configuration data
     """
-    def __init__(self, data, context, resolver: ConfigurationResolver):
+    def __init__(self, data, resolver: ConfigurationResolver, context = None):
         self._data = data
-        self._context = context
         self._resolver = resolver
-
-    @staticmethod
-    def build(data, context, resolver: ConfigurationResolver):
-        # if we have a dict, override it
-        if isinstance(data, dict):
-            return LazyDynamicDict(data, context, resolver)
-        else:
-            return resolver.resolve(data, context)
+        self._context = context
+        self._transform_map = {
+            DotMap: LazyDynamicDotMap,
+            dict: LazyDynamicDict
+        }
 
     def _transform_object(self, data):
-        return LazyDynamicBase.build(data, self._context, self._resolver)
+        for k, v in self._transform_map.items():
+            if isinstance(data, k):
+                return v(data, self._resolver, self._context)
+        return self._resolver.resolve(data, self._context)
+
+    def resolve(self):
+        raise Exception()
+        return self._resolver.resolve(self, self._context)
 
 
 class LazyDynamicDict(LazyDynamicBase, Mapping):
-    def __init__(self, data: dict, context, resolver: ConfigurationResolver):
-        super().__init__(data, context, resolver)
+    """
+    Lazy dynamic implementation of dict.
+    """
+    def __init__(self, data: Mapping, resolver: ConfigurationResolver, context = None):
+        super().__init__(data, resolver, context)
     
     def __getitem__(self, key):
         return self._transform_object(self._data[key])
@@ -145,50 +159,67 @@ class LazyDynamicDict(LazyDynamicBase, Mapping):
 
         return self._transform_object(result)
 
+    def with_context(self, context):
+        return LazyDynamicDict(self._data, self._resolver, context)
 
-class ConfigurationManager():
+
+class LazyDynamicDotMap(LazyDynamicBase, DotMap):
     """
-    Processes and resolves asset builder configuration blocks.
+    Lazy dynamic implementation of DotMap. This is just a wrapper around a LazyDynamicDict.
     """
-    def __init__(self, root: Path, config: dict):
-        self._config = config
-        self._globals = {
-            'path.root': root,
-            'path.content': root.joinpath('content'),
-            'path.game': root.joinpath('game'),
-            'path.src': root.joinpath('src')
-        }
+    def __init__(self, data: Mapping, resolver: ConfigurationResolver, context = None):
+        LazyDynamicBase.__init__(self, data, resolver, context)
+        DotMap.__init__(self)
 
-        self._resolver = ConfigurationResolver(self)
+        if not resolver:
+            raise Exception()
 
-        self._globals['path.devtools'] = self._globals['path.src'].joinpath('devtools')
-        self._globals['path.secrets'] = self._globals['path.devtools'].joinpath('buildsys', 'secrets')
-        assert self._globals['path.content'].exists()
-        assert self._globals['path.game'].exists()
+        # Ensure any child dicts use DotMap for resolution
+        self._map = LazyDynamicDict(data, resolver, context)
+        self._map._transform_map[dict] = __class__
+        self._transform_map[dict] = __class__
 
-        if not config['defaults'].get('project'):
-            raise Exception('The \"project\" default must be defined!')
-        self._globals['path.vproject'] = self._globals['path.game'].joinpath(config['defaults']['project']).resolve()
+    def __setitem__(self, k, v):
+        raise NotImplementedError()
+    def __getitem__(self, k):
+        return self._map[k]
 
-    def _get_internal(self, key, default = None, context: dict = {}):
-        result = None
-        if key in ('assets', 'subsystems', 'args', 'defaults'):
-            result = self._config[key]
-        elif key.startswith('args.'):
-            result = self._config['args'].get(key[5:])
+    def __setattr__(self, k, v):
+        if k in {'_data','_resolver','_context','_transform_map'}:
+            LazyDynamicBase.__setattr__(self, k, v)
         else:
-            result = self._globals.get(key)
+            DotMap.__setattr__(self, k, v)
 
-        if result is None:
-            return default
-        
-        return LazyDynamicBase.build(result, context, self._resolver)
+    def __getattr__(self, k):
+        if k in {'_data','_resolver','_context','_transform_map'}:
+            print(k)
+            return LazyDynamicBase.__getattr__(self, k)
+        return DotMap.__getattr__(self, k)
 
-    def __getitem__(self, key):
-        return self._get_internal(key)
+    def with_context(self, context):
+        return LazyDynamicDotMap(self._data, self._resolver, context)
 
-    def get(self, key, default = None, context: dict = {}):
-        return self._get_internal(key, default, context)
 
-    def resolve(self, data, context: dict = {}):
-        return self._resolver.resolve(data, context)
+class ConfigurationUtilities():
+    @staticmethod
+    def parse_root_config(root: Path, config: dict) -> dict:
+        # validate the schema
+        schema_path = Path(__file__).parent.absolute().joinpath('schemas')
+        with open(schema_path.joinpath('root.schema.json'), 'r') as f:
+            root_schema = json.load(f)
+        jsonschema.validate(config, root_schema)
+
+        config = DotMap(config)
+
+        config.path.root = root
+        config.path.content = root.joinpath('content')
+        config.path.game = root.joinpath('game')
+        config.path.src = root.joinpath('src')
+
+        config.path.devtools = config.path.src.joinpath('devtools')
+        config.path.secrets = config.path.devtools.joinpath('buildsys', 'secrets')
+        config.path.vproject = config.path.game.joinpath(config.options.project).resolve()
+
+        # create the root resolver and the map
+        resolver = ConfigurationResolver(config)
+        return LazyDynamicDotMap(config.toDict(), resolver)

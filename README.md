@@ -74,9 +74,5 @@ There is a limited set of globals you can reference in conditional statements (w
 - `assets`: The value of the `assets` key in the configuration file.
 - `subsystems`: The value of the `subsystems` key in the configuration file.
 
-## Dependencies
-Install the dependencies using `pip`.
-
-```
-python3 -m pip install -r requirements.txt --user
-```
+## Development
+Run the setup script for your platform to install dependencies - either install_deps.bat or install_deps.sh.

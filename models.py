@@ -1,6 +1,6 @@
 import assetbuilder.utilities as utilities
 from assetbuilder.common.steamtools import SteamInstance, SteamApp
-from assetbuilder.config import ConfigurationManager
+from assetbuilder.config import ConfigurationUtilities
 
 from typing import List, Set
 from pathlib import Path
@@ -12,28 +12,30 @@ import logging
 import subprocess
 import pprint
 
+from dotmap import DotMap
+
 
 class BuildEnvironment():
     """
     Contains attributes about the current build environment
     """
     def __init__(self, path: str, config: dict):
-        self.config = ConfigurationManager(path, config)
+        self.config = ConfigurationUtilities.parse_root_config(path, config)
 
-        self.build_type = self.config['args.build_type']
+        self.build_type = self.config.args.build_type
         self.build_categories = None
 
-        categories = self.config['args.build_categories']
+        categories = self.config.args.build_categories
         if categories:
             categories = categories.split(',')
             self.build_categories = frozenset(categories)
 
-        self.verbose = self.config['args.verbose']
+        self.verbose = self.config.args.verbose
         
-        self.root = self.config['path.root']
-        self.content = self.config['path.content']
-        self.game = self.config['path.game']
-        self.src = self.config['path.src']
+        self.root = self.config.path.root
+        self.content = self.config.path.content
+        self.game = self.config.path.game
+        self.src = self.config.path.src
 
         self.platform = utilities.resolve_platform_name()
         self.steam = None
@@ -60,17 +62,17 @@ class BuildEnvironment():
 
     def _setup_bindir(self):
         self.bindir = self.game.joinpath('bin', self.platform)
-        override = self.config['defaults'].get('bin_path')
+        override = self.config.options.get('bin_path')
 
         # we have a bin path override
         if override is not None:
             self.bindir = Path(override).joinpath(self.platform)
         # we're a mod (modwrapper present but no game executable) - autodetect bin path from appid
         elif self._check_autodetect_appid():
-            appid = self.config['defaults'].get('bin_appid')
+            appid = self.config.options.get('bin_appid')
             if appid is not None:
-                logging.debug(f'mod detected - using base appid {appid}')
-                self.bindir = self._get_appid_folder(int(appid)).joinpath('bin', self.platform)
+                logging.debug(f'mod detected - using base appid {str(appid)}')
+                self.bindir = self._get_appid_folder(appid).joinpath('bin', self.platform)
 
         if not self.bindir.exists():
             raise Exception('Could not find the bin directory')
@@ -107,7 +109,7 @@ class BuildEnvironment():
         predef['stderr'] = subprocess.STDOUT
         
         predef['env'] = os.environ
-        predef['env']['VPROJECT'] = str(self.config['path.vproject'])
+        predef['env']['VPROJECT'] = str(self.config.path.vproject)
         
         try:
             result = subprocess.run(*args, **dict(predef, **kwargs))
@@ -184,7 +186,6 @@ class BaseDriver():
     Represents an instance of a tool that compiles assets
     """
     def __init__(self, env: BuildEnvironment, config: dict):
-        
         self.env = env
         self.config = config
         self.tool = str(self.env.get_tool(self._tool_name()))

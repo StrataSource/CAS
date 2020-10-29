@@ -16,10 +16,10 @@ class FGDBuildSubsystem(BuildSubsystem):
     Subsystem that builds FGDs and Hammer assets from HammerAddons
     """
     def build(self) -> BuildResult:
-        project = self.env.config['defaults']['project']
+        project = self.env.config.options.project
 
-        srcpath = Path(self.env.root).joinpath(self.config['source']).resolve()
-        destpath = Path(self.env.root).joinpath(self.config['dest']).resolve()
+        srcpath = Path(self.env.root).joinpath(self.config.source).resolve()
+        destpath = Path(self.env.root).joinpath(self.config.dest).resolve()
 
         logging.info('Building FGD...')
         spec = importlib.util.spec_from_file_location('hammeraddons.unifyfgd', srcpath.joinpath('unify_fgd.py'))
@@ -35,7 +35,7 @@ class FGDBuildSubsystem(BuildSubsystem):
         # redirect our output so logs aren't spammed on non-verbose mode
         log_dev = sys.stdout if self.env.verbose else None
         with contextlib.redirect_stdout(log_dev):
-            mod.action_export(srcpath.joinpath('fgd'), None, frozenset({'SRCTOOLS', self.config['branch']}), outfile, False, False)
+            mod.action_export(srcpath.joinpath('fgd'), None, frozenset({'SRCTOOLS', self.config.branch}), outfile, False, False)
 
         logging.info('Copying output files...')
         shutil.copy(outfile, destpath.joinpath('bin', f'{project}.fgd'))

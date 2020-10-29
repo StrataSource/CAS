@@ -101,7 +101,7 @@ class VPKBuildSubsystem(BuildSubsystem):
 
     def build(self) -> BuildResult:
         outputs = {'files': []}
-        for f in self.config['packfiles']:
+        for f in self.config.packfiles:
             vpk = self._get_vpk(f)
             logging.info(f'VPK: Packing {len(vpk.files)} files into {vpk.prefix}')
             if not vpk.pack():
@@ -122,7 +122,7 @@ class VPKBuildSubsystem(BuildSubsystem):
         return BuildResult(True, outputs)
 
     def clean(self) -> bool:
-        for vpk in self.config['packfiles']:
+        for vpk in self.config.packfiles:
             # dupe code here, fix
             input_path = Path(vpk['input']).resolve()
             output_path = vpk.get('output')

@@ -28,7 +28,7 @@ class SteamworksSubsystem(BuildSubsystem):
         return user, pwd
 
     def _run_steamcmd(self) -> bool:
-        tool_dir = Path(self.config['tooldir']).resolve()
+        tool_dir = Path(self.config.tooldir).resolve()
 
         if sys.platform == 'win32':
             tool_path = tool_dir.joinpath('builder', 'steamcmd.exe')
@@ -40,7 +40,7 @@ class SteamworksSubsystem(BuildSubsystem):
             raise NotImplementedError(f'unsupported platform {sys.platform}')
         
         script_cmd = []
-        for script in self.config['scripts']:
+        for script in self.config.scripts:
             script_file = tool_dir.joinpath('scripts', f'app_build_{script}.vdf')
             if not script_file.exists():
                 logging.error(f'Unable to find SteamCMD script at \"{script_file}\"!')
