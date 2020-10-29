@@ -22,7 +22,7 @@ class ViceDriver(BatchedDriver):
         return PrecompileResult([asset.path], [asset.outpath])
 
     def compile_all(self, context: AssetBuildContext, assets: List[Asset]) -> bool:
-        key = context.config['options']['key']
+        key = context.config.options.key
         if len(key) != 8:
             raise Exception('ICE key must be exactly 8 characters long')
 

@@ -2,7 +2,7 @@ from assetbuilder.models import BuildEnvironment, BuildSubsystem, Asset, AssetBu
 from assetbuilder.cache import AssetCache
 import assetbuilder.utilities
 
-from typing import List
+from typing import List, Sequence
 from pathlib import Path
 import multiprocessing
 import importlib
@@ -22,8 +22,10 @@ def _run_async_serial(driver: SerialDriver, context: AssetBuildContext, asset: A
     relpath = os.path.relpath(asset.path, driver.env.root)
 
     context.logger = logger
-    context.logger.info(f'(CC) {str(relpath)}')
+    if not context.logger:
+        context.logger = logging.getLogger()
 
+    context.logger.info(f'(CC) {str(relpath)}')
     success = driver.compile(context, asset)
 
     if not success:
@@ -80,19 +82,21 @@ class Builder():
         return driver
 
     def _load_asset_context(self, config: dict) -> AssetBuildContext:
-        if 'src' in config:
-            srcpath = Path(config['src'])
+        if config.src is not None:
+            srcpath = Path(config.src)
         else:
-            srcpath = self.env.config['path.content']
+            srcpath = self.env.config.path.content
         
         if not srcpath.exists():
             raise Exception(f'The asset source folder \"{srcpath}\" does not exist.')
 
         patterns = []
-        if isinstance(config['files'], list):
-            patterns += config['files']
+        if isinstance(config.files, str):
+            patterns.append(config.files)
+        elif isinstance(config.files, Sequence):
+            patterns += config.files
         else:
-            patterns.append(config['files'])
+            raise NotImplementedError()
 
         # find everything by the patterns
         files = []
@@ -112,7 +116,7 @@ class Builder():
         logging.info('running asset build')
 
         contexts = []
-        for entry in list(self.env.config['assets']):
+        for entry in self.env.config.assets:
             contexts.append(self._load_asset_context(entry))
 
         hash_inputs = {}
@@ -121,14 +125,14 @@ class Builder():
 
         # prebuild
         for context in contexts:
-            driver = self._get_asset_driver(context.config['type'], {})
+            driver = self._get_asset_driver(context.config.type, {})
             for asset in context.assets:
                 result = driver.precompile(context, asset)
                 if not result:
                     logging.error('Asset dependency error!')
                     return False
 
-                if self.args['clean']:
+                if self.args.clean:
                     for f in result.outputs:
                         if not f.exists():
                             continue
@@ -156,47 +160,63 @@ class Builder():
                     total_build += 1
                     context.buildable.append(asset)
 
-        if self.args['clean']:
+        if self.args.clean:
             logging.info('assets cleaned')
             return True
 
-        logging.info(f'{len(hash_inputs)} input files')
-        logging.info(f'{len(hash_outputs)} output files')
-        logging.info(f'{total_build} assets total will be rebuilt')
+        logging.info(f'{len(hash_inputs)} input files, {len(hash_outputs)} output files')
+        logging.info(f'{total_build} files total will be rebuilt')
 
         if self.dry_run or total_build == 0:
             return True
 
         # build
-        jobs = []
-        logging.info(f'running build with {self.args["threads"]} threads')
-        pool = multiprocessing.Pool(self.args['threads'], initializer=_async_mod_init)
+        # TODO: duplicated code here for singlethreaded mode, fix!
+        if self.args.threads > 1:
+            jobs = []
+            logging.info(f'running multithreaded build with {self.args.threads} threads')
+            pool = multiprocessing.Pool(self.args.threads, initializer=_async_mod_init)
 
-        try:
+            try:
+                for context in contexts:
+                    if len(context.buildable) <= 0:
+                        logging.warning(f'no files found for a context with type {context.config.type}')
+                        continue
+
+                    driver = self._get_asset_driver(context.config.type, {})
+                    if isinstance(driver, BatchedDriver):
+                        jobs.append(pool.apply_async(_run_async_batched, (driver, context, context.buildable)))
+                    elif isinstance(driver, SerialDriver):
+                        for asset in context.buildable:
+                            jobs.append(pool.apply_async(_run_async_serial, (driver, context, asset)))
+                    else:
+                        raise Exception('Unknown driver type')
+                pool.close()
+            except KeyboardInterrupt:
+                pool.terminate()
+
+            pool.join()
+
+            for job in jobs:
+                result = job.get()
+                if not result:
+                    logging.error('Build failed')
+                    return False
+        else:
+            logging.info(f'running singlethreaded build')
             for context in contexts:
                 if len(context.buildable) <= 0:
-                    logging.warning(f'no files found for a context with type {context.config["type"]}')
+                    logging.warning(f'no files found for a context with type {context.config.type}')
                     continue
 
-                driver = self._get_asset_driver(context.config['type'], {})
+                driver = self._get_asset_driver(context.config.type, {})
                 if isinstance(driver, BatchedDriver):
-                    jobs.append(pool.apply_async(_run_async_batched, (driver, context, context.buildable)))
+                    _run_async_batched(driver, context, context.buildable)
                 elif isinstance(driver, SerialDriver):
                     for asset in context.buildable:
-                        jobs.append(pool.apply_async(_run_async_serial, (driver, context, asset)))
+                        _run_async_serial(driver, context, asset)
                 else:
                     raise Exception('Unknown driver type')
-            pool.close()
-        except KeyboardInterrupt:
-            pool.terminate()
-
-        pool.join()
-
-        for job in jobs:
-            result = job.get()
-            if not result:
-                logging.error('Build failed')
-                return False
 
         logging.info('recalculating asset hashes...')
         for context in contexts:
@@ -233,12 +253,12 @@ class Builder():
 
         # get the full configuration
         subsystem = subsystem.with_context(ctx)
-        self._load_subsystem(name, subsystem['module'], subsystem.get('options', {}))
+        self._load_subsystem(name, subsystem.module, subsystem.get('options', {}))
         
         # run
         sys = self._subsystems[name]
         logging.info(f'running subsystem {name}')
-        if self.args['clean']:
+        if self.args.clean:
             if not sys.clean():
                 return False
         else:
@@ -267,16 +287,14 @@ class Builder():
         self.cache.load()
 
         # skip asset build if we specify a different category explicitly
-        skip_assets = self.args['skip_assets']
+        skip_assets = self.args.skip_assets
         if self.env.build_categories is not None and not 'assets' in self.env.build_categories:
             logging.debug('asset build skipped (category mismatch)')
             skip_assets = True
 
-        subsystems = list(self.env.config['subsystems'].keys())
-
         # build wl/bl
-        whitelist = self.args['include_subsystems']
-        blacklist = self.args['exclude_subsystems']
+        whitelist = self.args.include_subsystems
+        blacklist = self.args.exclude_subsystems
         if whitelist:
             whitelist = whitelist.split(',')
         if blacklist:
@@ -288,7 +306,7 @@ class Builder():
         # sort subsystems into before/after assets
         before_subs = []
         after_subs = []
-        for k, v in self.env.config['subsystems'].items():
+        for k, v in self.env.config.subsystems.items():
             if v.get('before_assets', False) is True:
                 before_subs.append(k)
             else:

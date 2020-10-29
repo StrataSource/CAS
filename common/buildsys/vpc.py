@@ -13,7 +13,6 @@ BUILD_TYPE_MAP = {
     'release': 'CHAOS_REL_BUILD'
 }
 
-
 class VPCArguments():
     def __init__(self, args: List[str], args_raw: List[str], groups: List[str], defines: List[str]):
         self.args = args
@@ -54,14 +53,13 @@ class VPCInstance():
         self._group = self._config.get('group', 'everything')
 
     def _process_vpc_args(self) -> VPCArguments:
-        args = self._config.get('args', [])
-        defines = self._config.get('defines', [])
-
-        windows_args = self._config.get('windows', {})
-        posix_args = self._config.get('posix', {})
+        args = list(self._config.get('args', []))
+        defines = list(self._config.get('defines', []))
 
         args.append(self._project)
         args.append(self._env.platform)
+
+        windows_args = self._config.get('windows', {})
         args.append(windows_args.get('toolchain', '2019'))
 
         if self._config.get('ide_files', False):

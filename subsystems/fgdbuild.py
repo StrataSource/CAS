@@ -21,7 +21,6 @@ class FGDBuildSubsystem(BuildSubsystem):
         srcpath = Path(self.env.root).joinpath(self.config.source).resolve()
         destpath = Path(self.env.root).joinpath(self.config.dest).resolve()
 
-        logging.info('Building FGD...')
         spec = importlib.util.spec_from_file_location('hammeraddons.unifyfgd', srcpath.joinpath('unify_fgd.py'))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -36,8 +35,7 @@ class FGDBuildSubsystem(BuildSubsystem):
         log_dev = sys.stdout if self.env.verbose else None
         with contextlib.redirect_stdout(log_dev):
             mod.action_export(srcpath.joinpath('fgd'), None, frozenset({'SRCTOOLS', self.config.branch}), outfile, False, False)
-
-        logging.info('Copying output files...')
+            
         shutil.copy(outfile, destpath.joinpath('bin', f'{project}.fgd'))
 
         hammer_dir = destpath.joinpath('hammer')

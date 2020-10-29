@@ -7,7 +7,7 @@ import copy
 import json
 import logging
 import collections
-from collections.abc import Mapping
+from collections.abc import Sequence, Mapping, MutableMapping
 from typing import List, Set
 from pathlib import Path
 
@@ -22,13 +22,24 @@ class ConfigurationResolver():
     """
     def __init__(self, data: dict):
         self._data = data
+
+    def _resolve_key_str(self, key: str):
+        keys = key.split('.')
+        current = self._data
+        for k in keys:
+            if not k in current:
+                print(current)
+                return None
+            current = current[k]
+            if not isinstance(current, Mapping):
+                return current
+        return None
     
     def _inject_config_str(self, config: str, literal: bool = False) -> str:
         """
         A terrible lexical parser for interpolated globals.
         I.e. "build type: $(args.build)" returns "build type: trunk"
         """
-
         prev = None
         inblock = False
         current = ''
@@ -42,7 +53,10 @@ class ConfigurationResolver():
                 # read to end for key
                 inblock = True
             elif inblock and c == ')':
-                result += str(self._data.get(current, 'None'))
+                value = self._resolve_key_str(current)
+                if value is None:
+                    raise Exception(f'Value of configuration variable $({current}) was None')
+                result += str(value)
 
                 current = ''
                 inblock = False
@@ -116,13 +130,13 @@ class LazyDynamicBase():
     """
     Base object that allows lazy resolution of configuration data
     """
-    def __init__(self, data, resolver: ConfigurationResolver, context = None):
+    def __init__(self, data = None, resolver: ConfigurationResolver = None, context = None):
         self._data = data
         self._resolver = resolver
         self._context = context
         self._transform_map = {
-            DotMap: LazyDynamicDotMap,
-            dict: LazyDynamicDict
+            list: LazyDynamicSequence,
+            dict: LazyDynamicDotMap
         }
 
     def _transform_object(self, data):
@@ -132,19 +146,41 @@ class LazyDynamicBase():
         return self._resolver.resolve(data, self._context)
 
     def resolve(self):
-        raise Exception()
         return self._resolver.resolve(self, self._context)
 
 
-class LazyDynamicDict(LazyDynamicBase, Mapping):
+class LazyDynamicSequence(LazyDynamicBase, Sequence):
     """
-    Lazy dynamic implementation of dict.
+    Lazy dynamic implementation of Sequence.
     """
-    def __init__(self, data: Mapping, resolver: ConfigurationResolver, context = None):
+    def __init__(self, data: Sequence = [], resolver: ConfigurationResolver = None, context = None):
+        super().__init__(data, resolver, context)
+
+    def __getitem__(self, key):
+        return self._transform_object(self._data[key])
+
+    def __len__(self):
+        return len(self._data)
+
+    def with_context(self, context):
+        return LazyDynamicSequence(self._data, self._resolver, context)
+
+
+class LazyDynamicMapping(LazyDynamicBase, MutableMapping):
+    """
+    Lazy dynamic implementation of Mapping.
+    """
+    def __init__(self, data: Mapping = {}, resolver: ConfigurationResolver = None, context = None):
         super().__init__(data, resolver, context)
     
     def __getitem__(self, key):
-        return self._transform_object(self._data[key])
+        return self._transform_object(self._data.get(key))
+
+    def __setitem__(self, key, value):
+        self._data[key] = value
+
+    def __delitem__(self, key):
+        return self._data.__delitem__(key)
 
     def __len__(self):
         return len(self._data)
@@ -160,27 +196,21 @@ class LazyDynamicDict(LazyDynamicBase, Mapping):
         return self._transform_object(result)
 
     def with_context(self, context):
-        return LazyDynamicDict(self._data, self._resolver, context)
+        return LazyDynamicMapping(self._data, self._resolver, context)
 
 
 class LazyDynamicDotMap(LazyDynamicBase, DotMap):
     """
-    Lazy dynamic implementation of DotMap. This is just a wrapper around a LazyDynamicDict.
+    Lazy dynamic implementation of DotMap. This is just a wrapper around a LazyDynamicMapping.
     """
-    def __init__(self, data: Mapping, resolver: ConfigurationResolver, context = None):
+    def __init__(self, data: Mapping = {}, resolver: ConfigurationResolver = None, context = None):
         LazyDynamicBase.__init__(self, data, resolver, context)
         DotMap.__init__(self)
 
-        if not resolver:
-            raise Exception()
-
-        # Ensure any child dicts use DotMap for resolution
-        self._map = LazyDynamicDict(data, resolver, context)
-        self._map._transform_map[dict] = __class__
-        self._transform_map[dict] = __class__
+        self._map = LazyDynamicMapping(data, resolver, context)
 
     def __setitem__(self, k, v):
-        raise NotImplementedError()
+        self._map[k] = v
     def __getitem__(self, k):
         return self._map[k]
 
