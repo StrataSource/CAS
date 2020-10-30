@@ -7,7 +7,7 @@ import copy
 import json
 import logging
 import collections
-from collections.abc import Sequence, Mapping, MutableMapping
+from collections.abc import Sequence, Mapping
 from typing import List, Set
 from pathlib import Path
 
@@ -35,7 +35,7 @@ class ConfigurationResolver():
                 return current
         return None
     
-    def _inject_config_str(self, config: str, literal: bool = False) -> str:
+    def _inject_config_str(self, config: str) -> str:
         """
         A terrible lexical parser for interpolated globals.
         I.e. "build type: $(args.build)" returns "build type: trunk"
@@ -146,6 +146,9 @@ class LazyDynamicBase():
         return self._resolver.resolve(data, self._context)
 
     def resolve(self):
+        """
+        Resolves this dynamic object to its physical form
+        """
         return self._resolver.resolve(self, self._context)
 
 
@@ -166,7 +169,7 @@ class LazyDynamicSequence(LazyDynamicBase, Sequence):
         return LazyDynamicSequence(self._data, self._resolver, context)
 
 
-class LazyDynamicMapping(LazyDynamicBase, MutableMapping):
+class LazyDynamicMapping(LazyDynamicBase, Mapping):
     """
     Lazy dynamic implementation of Mapping.
     """
@@ -175,12 +178,6 @@ class LazyDynamicMapping(LazyDynamicBase, MutableMapping):
     
     def __getitem__(self, key):
         return self._transform_object(self._data.get(key))
-
-    def __setitem__(self, key, value):
-        self._data[key] = value
-
-    def __delitem__(self, key):
-        return self._data.__delitem__(key)
 
     def __len__(self):
         return len(self._data)
