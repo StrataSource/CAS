@@ -82,7 +82,7 @@ class Builder():
         return driver
 
     def _load_asset_context(self, config: dict) -> AssetBuildContext:
-        if config.src is not None:
+        if config['src'] is not None:
             srcpath = Path(config.src)
         else:
             srcpath = self.env.config.path.content
