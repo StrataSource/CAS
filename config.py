@@ -196,32 +196,20 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
         return LazyDynamicMapping(self._data, self._resolver, context)
 
 
-class LazyDynamicDotMap(LazyDynamicBase, DotMap):
+class LazyDynamicDotMap(LazyDynamicMapping):
     """
-    Lazy dynamic implementation of DotMap. This is just a wrapper around a LazyDynamicMapping.
+    Lazy dynamic implementation of DotMap.
     """
     def __init__(self, data: Mapping = {}, resolver: ConfigurationResolver = None, context = None):
-        LazyDynamicBase.__init__(self, data, resolver, context)
-        DotMap.__init__(self)
+        super().__init__(data, resolver, context)
 
-        self._map = LazyDynamicMapping(data, resolver, context)
-
-    def __setitem__(self, k, v):
-        self._map[k] = v
-    def __getitem__(self, k):
-        return self._map[k]
-
-    def __setattr__(self, k, v):
-        if k in {'_data','_resolver','_context','_transform_map'}:
-            LazyDynamicBase.__setattr__(self, k, v)
-        else:
-            DotMap.__setattr__(self, k, v)
+        self._data = DotMap()
+        self._data._map = data
 
     def __getattr__(self, k):
-        if k in {'_data','_resolver','_context','_transform_map'}:
-            print(k)
-            return LazyDynamicBase.__getattr__(self, k)
-        return DotMap.__getattr__(self, k)
+        if k in {'_data','_resolver','_context','_transform_map','_dotmap'}:
+            return super(self.__class__, self).__getattribute__(k)
+        return self._transform_object(self._data.__getattr__(k))
 
     def with_context(self, context):
         return LazyDynamicDotMap(self._data, self._resolver, context)
