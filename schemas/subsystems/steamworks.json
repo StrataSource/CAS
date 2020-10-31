@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/subsystems/steamworks.json",
+
+    "title": "Steamworks Publisher Options",
+    "type": "object",
+    "required": ["tooldir", "scripts"],
+    "properties": {
+        "tooldir": {
+            "type": "string",
+            "title": "Tool Directory",
+            "description": "The folder where the Steamworks Content Builder is located.",
+            "examples": ["$(path.devtools)/buildsys/steam/contentbuilder"]
+        },
+        "scripts": {
+            "type": "array",
+            "title": "Scripts",
+            "description": "Array of Content Builder script names (without .vdf) to run.",
+            "examples": [["shared", "windows"]]
+        }
+    }
+}

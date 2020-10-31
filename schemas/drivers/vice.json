@@ -1,0 +1,18 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/drivers/vice.json",
+
+    "type": "object",
+    "title": "ICE Encrypted File",
+    "description": "Describes a file to be encrypted with VICE (Valve ICE)",
+    "required": ["key"],
+    "properties": {
+        "key": {
+            "type": "string",
+            "title": "Encryption Key",
+            "description": "The key to encrypt with",
+            "minLength": 8,
+            "maxLength": 8
+        }
+    }
+}

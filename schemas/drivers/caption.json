@@ -1,0 +1,8 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/drivers/caption.json",
+
+    "type": "object",
+    "title": "Caption",
+    "description": "Defines a closed caption asset to be compiled"
+}

@@ -1,0 +1,173 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/subsystems/buildsys.json",
+
+    "title": "Build System Options",
+    "description": "Options for buildsys, a subsystem that compiles source code.",
+
+    "type": "object",
+    "required": ["solution"],
+    "properties": {
+        "solution": {
+            "type": "string",
+            "title": "Solution",
+            "description": "The name of the solution to build.",
+            "examples": ["p2ce"]
+        },
+        "project": {
+            "type": "string",
+            "title": "Project",
+            "description": "The name of the project to build. Leaving this not set will build all projects in the solution.",
+            "examples": ["materialsystem"]
+        },
+        "configure": {
+            "type": "boolean",
+            "title": "Enable Configuration Pass",
+            "description": "Whether to enable the configuration pass.",
+            "default": true
+        },
+        "compile": {
+            "type": "boolean",
+            "title": "Enable Compilation Pass",
+            "description": "Whether to enable the compilation pass.",
+            "default": false
+        },
+        "windows": {
+            "type": "object",
+            "title": "Windows Specific Options"
+        },
+        "posix": {
+            "type": "object",
+            "title": "POSIX Specific Options",
+            "properties": {
+                "cc": {
+                    "type": "string",
+                    "title": "C Compiler",
+                    "description": "Name of the C compiler to use",
+                    "default": "gcc"
+                },
+                "cxx": {
+                    "type": "string",
+                    "title": "C++ Compiler",
+                    "description": "Name of the C++ compiler to use",
+                    "default": "g++"
+                },
+                "jobs": {
+                    "type": "integer",
+                    "title": "Job Count",
+                    "description": "Number of jobs (threads) to use",
+                    "default": 8
+                },
+                "platform": {
+                    "type": "string",
+                    "title": "Platform",
+                    "description": "Platform to target",
+                    "enum": ["linux-x86", "linux-x64", "linux-aarch32", "linux-aarch64"],
+                    "default": "linux-x64"
+                },
+                "sanitizers": {
+                    "type": "object",
+                    "title": "Sanitizers",
+                    "description": "Sanitizers to enable/disable",
+                    "properties": {
+                        "address": {
+                            "type": "boolean",
+                            "title": "Address",
+                            "default": false
+                        },
+                        "behavior": {
+                            "type": "boolean",
+                            "title": "Undefined Behavior",
+                            "default": false
+                        },
+                        "threading": {
+                            "type": "boolean",
+                            "title": "Threading",
+                            "default": false
+                        }
+                    }
+                },
+                "environment": {
+                    "type": "object",
+                    "title": "Environment",
+                    "description": "Configuration options for the POSIX build environment",
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "title": "Type",
+                            "description": "The type of build environment to use",
+                            "enum": ["native", "chroot", "docker"],
+                            "default": "docker"
+                        },
+                        "options": {
+                            "type": "object",
+                            "title": "Options",
+                            "description": "Options for the specified build environment",
+                            "additionalProperties": true
+                        }
+                    }
+                },
+                "dependencies": {
+                    "type": "object",
+                    "title": "Dependencies",
+                    "description": "Key-value dictionary of POSIX dependencies",
+
+                    "additionalProperties": { "$ref": "#/definitions/dependency" }
+                }
+            }
+        },
+        "vpc": {
+            "type": "object",
+            "title": "VPC Options",
+            "description": "Options for VPC (Valve Project Creator)",
+
+            "properties": {
+                "group": {
+                    "type": "string",
+                    "title": "Group",
+                    "description": "The name of the VPC group (collection of VPC projects) to build.",
+                    "default": "everything"
+                },
+                "ide_files": {
+                    "type": "boolean",
+                    "title": "IDE Files",
+                    "description": "Whether to enable the generation of files for linting in IDEs (CMakeLists, ClangDB)",
+                    "default": false
+                },
+                "defines": {
+                    "type": "array",
+                    "title": "Defines",
+                    "description": "List of defines to enable.",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "examples": [["NO_TELEMETRY", "NO_PANORAMA"]]
+                },
+                "args": {
+                    "type": "array",
+                    "title": "Arguments",
+                    "description": "List of extra arguments to pass to VPC.",
+                    "items": { "type": "string" },
+                    "default": [],
+                    "examples": [["nop4add", "no_econ"]]
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dependency": {
+            "type": "object",
+            "title": "Dependency",
+            "description": "POSIX dependency specification",
+
+            "required": ["src", "run"],
+            "properties": {
+                "src": {
+                    "type": "string",
+                    "title": "Source Folder",
+                    "description": "The location of the source code",
+                    "default": "$(path.src)/thirdparty/$(self.key)"
+                }
+            }
+        }
+    }
+}

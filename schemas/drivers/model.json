@@ -1,0 +1,8 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/drivers/model.json",
+
+    "type": "object",
+    "title": "Model",
+    "description": "Describes a 3D model to be compiled"
+}

@@ -23,13 +23,13 @@ class SyncFolderSubsystem(BuildSubsystem):
         from_dir = Path(self.config['from']).resolve()
         to_dir = Path(self.config.to).resolve()
 
-        if self.config.get('delete') and to_dir.exists():
+        if self.config.clobber and to_dir.exists():
             shutil.rmtree(to_dir, onerror=_shutil_delete_force)
 
         if not to_dir.exists():
             to_dir.mkdir()
 
-        files = utilities.rglob_multi(from_dir, self.config.get('files', []))
+        files = utilities.rglob_multi(from_dir, self.config.files)
         logging.debug(str(len(files)) + f' file(s) to copy')
 
         for src in files:

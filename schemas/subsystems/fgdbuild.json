@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/subsystems/fgdbuild.json",
+
+    "title": "FGD Builder Options",
+    "type": "object",
+    "required": ["branch", "source"],
+    "properties": {
+        "branch": {
+            "type": "string",
+            "title": "Branch",
+            "description": "The engine branch to build for, as defined in HammerAddons"
+        },
+        "source": {
+            "type": "string",
+            "title": "Source Folder",
+            "description": "The source folder where HammerAddons is located"
+        },
+        "dest": {
+            "type": "string",
+            "title": "Destination Folder",
+            "description": "The destination folder to copy the build outputs to",
+            "default": "$(path.game)"
+        }
+    }
+}

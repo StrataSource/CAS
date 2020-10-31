@@ -16,6 +16,21 @@ import jsonschema
 from dotmap import DotMap
 
 
+def extend_validator_with_default(validator_class):
+    validate_properties = validator_class.VALIDATORS['properties']
+    def set_defaults(validator, properties, instance, schema):
+        for property, subschema in properties.items():
+            if 'default' in subschema:
+                instance.setdefault(property, subschema['default'])
+        for error in validate_properties(validator, properties, instance, schema):
+            yield error
+    
+    return jsonschema.validators.extend(validator_class, {'properties': set_defaults})
+
+
+DefaultValidatingDraft7Validator = extend_validator_with_default(jsonschema.Draft7Validator)
+
+
 class DataResolverContext():
     def __init__(self):
         self.results = DotMap()
@@ -234,10 +249,48 @@ class ConfigurationUtilities():
     def parse_root_config(root: Path, config: dict) -> dict:
         # validate the schema
         schema_path = Path(__file__).parent.absolute().joinpath('schemas')
-        with open(schema_path.joinpath('root.schema.json'), 'r') as f:
+        with open(schema_path.joinpath('root.json'), 'r') as f:
             root_schema = json.load(f)
-        jsonschema.validate(config, root_schema)
+        DefaultValidatingDraft7Validator(root_schema).validate(config)
 
+        # validate all driver options
+        drv_validators = {}
+        for asset in config['assets']:
+            if asset.type not in drv_validators:
+                driver_path = schema_path.joinpath('drivers', f'{asset.type}.json')
+                if not driver_path.exists():
+                    raise Exception(f'unable to find schema for asset driver \'{asset.type}\'')
+                with open(driver_path, 'r') as f:
+                    drv_validators[asset.type] = DefaultValidatingDraft7Validator(json.load(f))
+            if asset.get('options') is None:
+                continue
+            drv_validators[asset.type].validate(asset.options)
+
+        # validate all subsystem options
+        sub_validators = {}
+        sub_prefix = 'assetbuilder.subsystems.'
+        for k, subsystem in config['subsystems'].items():
+            if k in {'@conditions', '@expressions'}:
+                continue
+            
+            module = subsystem.module
+
+            # validating third-party subsystems is not supported yet
+            if not module.startswith(sub_prefix):
+                continue
+            sub_name = module[len(sub_prefix):]
+
+            if sub_name not in sub_validators:
+                sub_path = schema_path.joinpath('subsystems', f'{sub_name}.json')
+                if not sub_path.exists():
+                    raise Exception(f'unable to find schema for subsystem \'{sub_name}\'')
+                with open(sub_path, 'r') as f:
+                    sub_validators[sub_name] = DefaultValidatingDraft7Validator(json.load(f))
+            if subsystem.get('options') is None:
+                continue
+            sub_validators[sub_name].validate(subsystem.options)
+            
+        # setup the dotmap that we'll use to perform lazy resolution
         config = DotMap(config)
 
         config.path.root = root

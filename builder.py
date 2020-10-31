@@ -83,11 +83,7 @@ class Builder():
         return driver
 
     def _load_asset_context(self, config: dict) -> AssetBuildContext:
-        if config['src'] is not None:
-            srcpath = Path(config.src)
-        else:
-            srcpath = self.env.config.path.content
-        
+        srcpath = Path(config.src)
         if not srcpath.exists():
             raise Exception(f'The asset source folder \"{srcpath}\" does not exist.')
 
@@ -284,7 +280,6 @@ class Builder():
 
 
     def build(self) -> bool:
-        logging.debug(f'build starting with arguments: {self.args}')
         self.cache.load()
 
         # skip asset build if we specify a different category explicitly
@@ -308,7 +303,7 @@ class Builder():
         before_subs = []
         after_subs = []
         for k, v in self.env.config.subsystems.items():
-            if v.get('before_assets', False) is True:
+            if v.before_assets is True:
                 before_subs.append(k)
             else:
                 after_subs.append(k)

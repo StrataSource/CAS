@@ -1,0 +1,42 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/subsystems/syncfolder.json",
+
+    "title": "Folder Synchroniser Options",
+    "type": "object",
+    "required": ["from", "to", "files"],
+    "properties": {
+        "from": {
+            "type": "string",
+            "title": "Source Folder",
+            "description": "The folder to copy files from.",
+            "examples": ["$(path.game)"]
+        },
+        "to": {
+            "type": "string",
+            "title": "Destination Folder",
+            "description": "The folder to copy files to.",
+            "examples": ["$(path.root)/publish.tmp"]
+        },
+        "create": {
+            "type": "boolean",
+            "title": "Auto-create",
+            "description": "Whether to create the folder if it does not already exist",
+            "default": true
+        },
+        "clobber": {
+            "type": "boolean",
+            "title": "Clobber",
+            "description": "Whether to overwrite (delete and re-create) the folder instead of incrementally copying the changes",
+            "default": false
+        },
+        "files": {
+            "type": "array",
+            "title": "File Patterns",
+            "description": "List of glob(3) file patterns that define what files to include and exclude from this sync operation.",
+            "items": { "type": "string" },
+            "default": ["**/*"],
+            "examples": [["materials/**/*", "models/**/*"]]
+        }
+    }
+}

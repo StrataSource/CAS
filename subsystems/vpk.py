@@ -75,10 +75,6 @@ class VPKBuildSubsystem(BuildSubsystem):
     Subsystem that packs one or more files into a VPK
     """
     def _get_vpk(self, config: dict) -> VPKArchive:
-        if config.get('nobuild') is not None and config.nobuild == self.env.config.args.build_type:
-            logging.info(f'VPK: Skipping archive as it is excluded for this build type')
-            return
-
         prefix = config.prefix
 
         files = set()

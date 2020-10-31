@@ -25,7 +25,7 @@ class BuildsysSubsystem(BuildSubsystem):
 
         # configure stage (run VPC, build makefiles)
         if self.config.get('configure', True):
-            vpc = VPCInstance(self.env, self.config.vpc, self.config.project)
+            vpc = VPCInstance(self.env, self.config.vpc, self.config.solution)
             if not vpc.run() or not self._compiler.configure():
                 return BuildResult(False)
         

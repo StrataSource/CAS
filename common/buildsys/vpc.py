@@ -46,17 +46,17 @@ class VPCArguments():
 
 
 class VPCInstance():
-    def __init__(self, env: BuildEnvironment, config: LazyDynamicDotMap, project: str):
+    def __init__(self, env: BuildEnvironment, config: LazyDynamicDotMap, solution: str):
         self._env = env
         self._config = config
-        self._project = project
+        self._solution = solution
         self._group = self._config.get('group', 'everything')
 
     def _process_vpc_args(self) -> VPCArguments:
         args = list(self._config.get('args', []))
         defines = list(self._config.get('defines', []))
 
-        args.append(self._project)
+        args.append(self._solution)
         args.append(self._env.platform)
 
         windows_args = self._config.get('windows', {})

@@ -1,0 +1,71 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/subsystems/vpk.json",
+
+    "title": "VPK Packer Options",
+    "type": "object",
+    "properties": {
+        "keypair": {
+            "type": "object",
+            "title": "Signing Keypair",
+            "description": "Keypair to sign compiled VPKs with",
+            "properties": {
+                "public": {
+                    "type": "string",
+                    "title": "Public Key",
+                    "description": "The public part of the keypair",
+                    "examples": ["$(path.secrets)/my.publickey.vdf"]
+                },
+                "private": {
+                    "type": "string",
+                    "title": "Private Key",
+                    "description": "The private part of the keypair",
+                    "examples": ["$(path.secrets)/my.privatekey.vdf"]
+                }
+            }
+        },
+
+        "packfiles": {
+            "type": "array",
+            "title": "Packfiles",
+            "description": "List of VPK files to pack",
+            "items": { "$ref": "#/definitions/packfile" }
+        }
+    },
+    "definitions": {
+        "packfile": {
+            "type": "object",
+            "title": "Packfile",
+            "description": "A specification for a VPK file to pack",
+            "required": ["prefix", "input"],
+            "properties": {
+                "prefix": {
+                    "type": "string",
+                    "title": "Prefix",
+                    "description": "The prefix of the VPK (i.e. pak01 would create pak01_dir.vpk, etc)",
+                    "examples": ["pak01"]
+                },
+                "input": {
+                    "type": "string",
+                    "title": "Input Path",
+                    "description": "The path where the VPK content is located. All file patterns are relative to this.",
+                    "examples": ["$(path.game)/mymod"]
+                },
+                "output": {
+                    "type": "string",
+                    "title": "Output Path",
+                    "description": "The path where the VPK archive and control file should be created.",
+                    "default": "$(self.input)"
+                },
+                "files": {
+                    "type": "array",
+                    "title": "File Patterns",
+                    "description": "List of glob(3) file patterns that define what files to include and exclude from this VPK.",
+                    "items": { "type": "string" },
+                    "default": ["**/*"],
+                    "examples": [["materials/**/*", "models/**/*"]]
+                }
+            }
+        }
+    }
+}

@@ -1,22 +1,26 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://chaosinitiative.com/assetbuilder/schema/root.schema.json",
-
-    "title": "Configuration",
-    "description": "Root AssetBuilder configuration",
+    "$id": "https://chaosinitiative.com/assetbuilder/schema/root.json",
 
     "type": "object",
+    "title": "Configuration",
+    "description": "Root AssetBuilder configuration",
+    
     "required": ["options", "assets", "subsystems"],
     "properties": {
         "options": {
+            "type": "object",
             "title": "Options",
             "description": "Global configuration options",
-
-            "type": "object",
+            
             "required": ["project"],
             "properties": {
                 "project": {
                     "description": "The project namespace for your game or mod.",
+                    "type": "string"
+                },
+                "bin_path": {
+                    "description": "The location to source binaries from.",
                     "type": "string"
                 },
                 "bin_appid": {
@@ -26,52 +30,50 @@
             }
         },
         "assets": {
+            "type": "array",
             "title": "Assets",
             "description": "Array of asset build entries.",
-
-            "type": "array",
+            
             "items": { "$ref": "#/definitions/asset" }
         },
         "subsystems": {
+            "type": "object",
             "title": "Subsystems",
             "description": "Key-value dictionary of subsystem instances to run.",
-
-            "type": "object",
+            
             "properties": {
                 "@conditions": { "type": "object", "additionalProperties": true }
             },
-            "additionalProperties": {
-                "$ref": "#/definitions/subsystem"
-            }
+            "additionalProperties": { "$ref": "#/definitions/subsystem" }
         }
     },
 
     "definitions": {
         "asset": {
+            "type": "object",
             "title": "Asset",
             "description": "An entry instructing which asset(s) to build.",
-
-            "type": "object",
+            
             "required": ["type", "files"],
             "properties": {
                 "type": {
+                    "type": "string",
                     "title": "Type",
-                    "description": "The type of the asset.",
-                    "type": "string"
+                    "description": "The type of the asset."
                 },
                 "src": {
+                    "type": "string",
                     "title": "Source Folder",
                     "description": "The asset source folder.",
-
-                    "type": "string",
+                    
                     "default": "$(path.content)",
                     "examples": ["$(path.content)"]
                 },
                 "dest": {
+                    "type": "string",
                     "title": "Destination Folder",
                     "description": "The asset destination folder.",
-
-                    "type": "string",
+                    
                     "default": "$(path.game)",
                     "examples": ["$(path.game)"]
                 },
@@ -92,13 +94,11 @@
                     "examples": ["p2ce/resource/closecaption_*.txt"]
                 },
                 "options": {
+                    "type": "object",
                     "title": "Options",
                     "description": "Options to pass to the driver.",
-
-                    "type": "object",
-                    "additionalProperties": true,
                     
-                    "default": null,
+                    "additionalProperties": true,
                     "examples": [{"foobar": 1234}]
                 }
             }
@@ -111,39 +111,44 @@
             "required": ["module", "categories"],
             "properties": {
                 "module": {
+                    "type": "string",
                     "title": "Module",
                     "description": "The Python module to load.",
-
-                    "type": "string",
+                    
                     "examples": ["assetbuilder.subsystems.buildsys"]
                 },
                 "categories": {
+                    "type": "array",
                     "title": "Categories",
                     "description": "The categories this subsystem should run for.",
-
-                    "type": "array",
+                    
                     "examples": ["code"],
                     "items": { "type": "string" }
                 },
                 "build_types": {
+                    "type": "array",
                     "title": "Build Types",
                     "description": "The build types this subsystem should run for.",
-
-                    "type": "array",
-                    "default": null,
+                    
                     "examples": [["staging", "release"]],
                     "items": {
                         "type": "string",
                         "enum": ["trunk", "staging", "release"]
                     }
                 },
+                "before_assets": {
+                    "type": "boolean",
+                    "title": "Before Assets",
+                    "description": "Whether this subsystem should run before the asset build.",
+                    
+                    "default": false
+                },
                 "options": {
+                    "type": "object",
                     "title": "Options",
                     "description": "Options to pass to the subsystem.",
-
-                    "type": "object",
+                    
                     "additionalProperties": true,
-                    "default": null,
                     "examples": [{"foobar": 1234}]
                 }
             }
