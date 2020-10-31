@@ -1,5 +1,6 @@
 from assetbuilder.models import BuildEnvironment, BuildSubsystem, Asset, AssetBuildContext, BaseDriver, SerialDriver, BatchedDriver
 from assetbuilder.cache import AssetCache
+from assetbuilder.config import DataResolverContext
 import assetbuilder.utilities
 
 from typing import List, Sequence
@@ -112,7 +113,7 @@ class Builder():
             context.assets.append(Asset(f, {}))
         return context
 
-    def _run_asset_build(self, ctx: dict) -> bool:
+    def _run_asset_build(self, context: DataResolverContext) -> bool:
         logging.info('running asset build')
 
         contexts = []
@@ -232,7 +233,7 @@ class Builder():
         return True
 
 
-    def _run_subsystem(self, ctx: dict, name: str) -> bool:
+    def _run_subsystem(self, context: DataResolverContext, name: str) -> bool:
         if self.dry_run:
             return True
 
@@ -252,7 +253,7 @@ class Builder():
             return True
 
         # get the full configuration
-        subsystem = subsystem.with_context(ctx)
+        subsystem = subsystem.with_context(context)
         self._load_subsystem(name, subsystem.module, subsystem.get('options', {}))
         
         # run
@@ -263,13 +264,13 @@ class Builder():
                 return False
         else:
             result = sys.build()
-            ctx[f'results.subsystems.{name}'] = result
+            context.results.subsystems[name] = result
             if not result.success:
                 return False
         return True
 
 
-    def _run_subsystems(self, ctx: dict, subsystems: List[str], whitelist: List[str], blacklist: List[str]) -> bool:
+    def _run_subsystems(self, context: DataResolverContext, subsystems: List[str], whitelist: List[str], blacklist: List[str]) -> bool:
         for sub in subsystems:
             if whitelist and not sub in whitelist:
                 logging.debug(f'subsystem {sub} skipped (not whitelisted)')
@@ -277,7 +278,7 @@ class Builder():
             if blacklist and sub in blacklist:
                 logging.debug(f'subsystem {sub} skipped (blacklisted)')
                 continue
-            if not self._run_subsystem(ctx, sub):
+            if not self._run_subsystem(context, sub):
                 return False
         return True
 
@@ -301,7 +302,7 @@ class Builder():
             blacklist = blacklist.split(',')
 
         # create the context
-        ctx = DotMap()
+        context = DataResolverContext()
 
         # sort subsystems into before/after assets
         before_subs = []
@@ -313,16 +314,16 @@ class Builder():
                 after_subs.append(k)
 
         # first pass before assets
-        if not self._run_subsystems(ctx, before_subs, whitelist, blacklist):
+        if not self._run_subsystems(context, before_subs, whitelist, blacklist):
             return False
 
         # build assets
-        if not skip_assets and not self._run_asset_build(ctx):
+        if not skip_assets and not self._run_asset_build(context):
             logging.error('Asset build phase failed')
             return False
 
         # second pass after assets
-        if not self._run_subsystems(ctx, after_subs, whitelist, blacklist):
+        if not self._run_subsystems(context, after_subs, whitelist, blacklist):
             return False
         
         return True

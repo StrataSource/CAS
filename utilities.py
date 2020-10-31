@@ -25,7 +25,7 @@ class TqdmLoggingHandler(logging.Handler):
             self.handleError(record)
 
 
-def relative_paths(paths: list, root: Path) -> List[str]:
+def relative_paths(root: Path, paths: list) -> List[str]:
     """
     Normalises paths from incoming configuration and ensures
     they are all strings relative to root

@@ -37,6 +37,9 @@
             "description": "Key-value dictionary of subsystem instances to run.",
 
             "type": "object",
+            "properties": {
+                "@conditions": { "type": "object", "additionalProperties": true }
+            },
             "additionalProperties": {
                 "$ref": "#/definitions/subsystem"
             }
