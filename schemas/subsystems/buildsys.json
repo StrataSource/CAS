@@ -178,8 +178,8 @@
                 "src": {
                     "type": "string",
                     "title": "Source Folder",
-                    "description": "The location of the source code",
-                    "default": "$(path.src)/thirdparty/$(self.key)"
+                    "description": "The location of the source code, relative to $(path.src).",
+                    "default": "thirdparty/$(self.key)"
                 }
             }
         }

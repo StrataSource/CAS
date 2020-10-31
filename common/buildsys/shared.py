@@ -13,8 +13,8 @@ class BaseCompiler():
     Base compiler class from which all compilers should extend.
     """
     def __init__(self, env: BuildEnvironment, config: dict):
-        self.env = env
-        self.config = config
+        self._env = env
+        self._config = config
 
     def clean(self):
         """

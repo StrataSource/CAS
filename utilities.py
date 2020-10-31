@@ -1,6 +1,8 @@
 import os
 import sys
+import zlib
 import pathlib
+import hashlib
 import functools
 import struct
 import logging
@@ -98,6 +100,17 @@ def paths_to_relative(root, paths):
     for path in paths:
         out.append(os.path.relpath(path, root))
     return out
+
+
+def hash_file_sha256(path: Path):
+    hash = hashlib.sha256()
+    with open(path, 'rb') as f:
+        while True:
+            data = f.read(65536)
+            if not data:
+                break
+            hash.update(data)
+    return hash.hexdigest()
 
 
 def resolve_platform_name():

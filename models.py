@@ -102,17 +102,20 @@ class BuildEnvironment():
             raise NotImplementedError()
         return self.bindir.joinpath(lib).resolve()
 
-    def run_tool(self, *args, **kwargs) -> int:
+    def run_subprocess(self, *args, **kwargs):
         predef = {}
         if not self.verbose:
             predef['stdout'] = subprocess.DEVNULL
-        predef['stderr'] = subprocess.STDOUT
-        
+            predef['stderr'] = subprocess.DEVNULL
+        return subprocess.run(*args, **dict(predef, **kwargs))
+
+    def run_tool(self, *args, **kwargs) -> int:
+        predef = {}
         predef['env'] = os.environ
         predef['env']['VPROJECT'] = str(self.config.path.vproject)
         
         try:
-            result = subprocess.run(*args, **dict(predef, **kwargs))
+            result = self.run_subprocess(*args, **dict(predef, **kwargs))
         except Exception as e:
             raise Exception(f'failed to execute tool with parameters: {args}') from e
         return result.returncode

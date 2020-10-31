@@ -28,7 +28,7 @@ class MSBuildCompiler(BaseCompiler):
         sdk_ver = winreg.QueryValueEx(sdk_key, 'ProductVersion')
 
         winreg.CloseKey(sdk_key)
-        self.winsdk_path = os.path.join(sdk_path[0], f'bin\\{sdk_ver[0]}.0\\x64')
+        self._winsdk_path = os.path.join(sdk_path[0], f'bin\\{sdk_ver[0]}.0\\x64')
     
     def _invoke_msbuild(self, project: str, targets: List[str], parameters: Dict[str, str]) -> bool:
         args = [MSBUILD_PATH, f'{project}.sln']
@@ -37,12 +37,12 @@ class MSBuildCompiler(BaseCompiler):
             args.append(f'/p:{k}={v}')
 
         logging.debug(f'Running MSBuild with parameters: {args}')
-        returncode = self.env.run_tool(args, cwd=self.env.src)
+        returncode = self._env.run_tool(args, cwd=self._env.src)
         return returncode == 0
 
     def _build_default_parameters(self) -> Dict[str, str]:
         params = {}
-        if self.env.build_type == 'trunk':
+        if self._env.build_type == 'trunk':
             params['Configuration'] = 'Debug'
         else:
             params['Configuration'] = 'Release'

@@ -1,5 +1,6 @@
 jsonschema
 simpleeval
+appdirs
 dotmap
 tqdm
 vdf
