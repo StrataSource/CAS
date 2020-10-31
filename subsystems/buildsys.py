@@ -19,7 +19,7 @@ class BuildsysSubsystem(BuildSubsystem):
 
     def build(self) -> BuildResult:
         # force clean for staging/release
-        if self.env.build_type != 'trunk' and not self._compiler.clean(self._get_project_name()):
+        if self.env.build_type != 'trunk' and not self._compiler.clean():
             logging.error('Mandatory clean for staging/release builds failed!')
             return BuildResult(False)
 
@@ -38,7 +38,7 @@ class BuildsysSubsystem(BuildSubsystem):
     
     def clean(self) -> bool:
         # clean output files before we delete project files!
-        if not self._compiler.clean(self._get_project_name()):
+        if not self._compiler.clean():
             logging.error('Output binary clean failed!')
             return False
 
