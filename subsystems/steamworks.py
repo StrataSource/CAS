@@ -17,8 +17,8 @@ class SteamworksSubsystem(BuildSubsystem):
     App and depot configurations are generated on the fly
     """
     def _get_credentials(self):
-        user = self.config.get('username')
-        pwd = self.config.get('password')
+        user = self.config.username
+        pwd = self.config.password
         if not user or not pwd:
             print('Enter Steamworks Credentials')
             if not user:
@@ -29,7 +29,8 @@ class SteamworksSubsystem(BuildSubsystem):
 
     def _run_steamcmd(self) -> bool:
         tool_dir = Path(self.config.tooldir).resolve()
-
+        tool_path = None
+        
         if sys.platform == 'win32':
             tool_path = tool_dir.joinpath('builder', 'steamcmd.exe')
         elif sys.platform == 'darwin':

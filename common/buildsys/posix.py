@@ -5,6 +5,7 @@ from assetbuilder.common.buildsys.shared import BaseCompiler
 import os
 import logging
 import subprocess
+import multiprocessing
 from typing import List, Dict
 from pathlib import Path
 
@@ -35,10 +36,10 @@ class BaseCompileEnvironment():
 	def _build_envvars(self) -> dict:
 		env = os.environ.copy()
 		env.update({
-			'CC': self.config.get('cc', 'gcc'),
-			'CXX': self.config.get('cxx', 'g++'),
-			'JOBS': self.config.get('jobs', 8),
-			'PLATFORM': self.config.get('platform', 'linux-x64')
+			'CC': self.config.cc,
+			'CXX': self.config.cxx,
+			'JOBS': self.config.get('jobs', multiprocessing.cpu_count()),
+			'PLATFORM': self.config.platform
 		})
 
 		return env

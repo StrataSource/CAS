@@ -55,8 +55,7 @@
                 "jobs": {
                     "type": "integer",
                     "title": "Job Count",
-                    "description": "Number of jobs (threads) to use",
-                    "default": 8
+                    "description": "Number of jobs to use. If not set, defaults to the number of CPUs on the system."
                 },
                 "platform": {
                     "type": "string",
@@ -149,6 +148,21 @@
                     "items": { "type": "string" },
                     "default": [],
                     "examples": [["nop4add", "no_econ"]]
+                },
+                "windows": {
+                    "type": "object",
+                    "title": "Windows Options",
+                    "description": "Windows-specific VPC options.",
+                    "properties": {
+                        "toolchain": {
+                            "type": "string",
+                            "title": "Toolchain",
+                            "description": "Version of the Visual Studio toolchain to use.",
+                            "enum": ["2005", "2008", "2010", "2013", "2015", "2017", "2019"],
+                            "default": "2019"
+                        }
+                    },
+                    "default": {}
                 }
             }
         }

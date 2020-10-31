@@ -50,19 +50,17 @@ class VPCInstance():
         self._env = env
         self._config = config
         self._solution = solution
-        self._group = self._config.get('group', 'everything')
+        self._group = self._config.group
 
     def _process_vpc_args(self) -> VPCArguments:
-        args = list(self._config.get('args', []))
-        defines = list(self._config.get('defines', []))
+        args = list(self._config.args)
+        defines = list(self._config.defines)
 
         args.append(self._solution)
         args.append(self._env.platform)
+        args.append(self._config.windows.toolchain)
 
-        windows_args = self._config.get('windows', {})
-        args.append(windows_args.get('toolchain', '2019'))
-
-        if self._config.get('ide_files', False):
+        if self._config.ide_files:
             args.append('clangdb')
             args.append('cmake')
         

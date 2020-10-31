@@ -34,15 +34,8 @@ The **build type** (`--build-type`) selects the type of the build you want to pe
 The **build categories** (`--build-categories`) define whether assets should be built and what subsystems should run, if any. The default is to build all categories if one is not explicitly specified. If a category different from `assets` is specified, assets will not be built. The categories of a subsystem can be defined with the `categories` key.
 
 ### Expressions and Conditions
-AssetBuilder has support for conditional statements to include or exclude segments of configuration whenever a condition is met.
+AssetBuilder has support for conditional statements to include or exclude segments of configuration whenever a condition is met. Specify the conditions inside the block you want to set as a list with the special `@conditions` key.
 
-Specify the conditions inside the block you want to set as a list with the special `@conditions` key.
-Inside, you may use Python expression syntax.
-
-There are three special functions you can use to retrieve data for use in expressions:
-- `context(key, default)`: gets the value of the a key in the current build context
-- `config(key, default)`: gets the value of a key in the global configuration store
-- `parent(key, default)`: gets the value of a key in the same configuration block
 
 AssetBuilder also has support for custom expressions with `@expressions`, to dynamically modify parts of configuration on the fly. Specify this as a set with each key you want to modify. It uses the same syntax as conditions.
 
@@ -57,22 +50,18 @@ Example:
     "create": true,
     "files": [ "!.git" ],
 
-    "@conditions": ["config('args.build_type') != 'trunk'"]
+    "@conditions": ["args.build_type != 'trunk'"]
 }
 ```
 
 Note that expressions are always evaluated before conditions in the same block.
 
-### Globals
-There is a limited set of globals you can reference in conditional statements (with `R('foo.bar')`) and strings (with `$(foo.bar)`).
-- `path.root`: The root path of your workspace.
-- `path.content`: The content directory. Defaults to `$(path.root)/content`.
-- `path.game`: The game directory. Defaults to `$(path.root)/game`.
-- `path.src`: The source code directory. Defaults to `$(path.root)/src`.
-- `path.secrets`: The directory that contains build secrets.
-- `args`: All arguments passed in to the build system.
-- `assets`: The value of the `assets` key in the configuration file.
-- `subsystems`: The value of the `subsystems` key in the configuration file.
+### Local scope
+Inside conditions and macros a specific set of names are available in the local scope:
+- `parent`, the parent object of this value
+- `context`, the current resolution context
+- `path`, `args`, `assets`, and `subsystems` from the configuration file
+- `env`, a dict containing `platform`, the system platform, and `cpu_count`, the number of system CPUs
 
 ## Development
 Run the setup script for your platform to install dependencies - either install_deps.bat or install_deps.sh.

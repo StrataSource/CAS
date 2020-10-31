@@ -7,6 +7,7 @@ import copy
 import json
 import logging
 import collections
+import multiprocessing
 from collections.abc import Sequence, Mapping
 from typing import List, Set, Callable
 from pathlib import Path
@@ -61,7 +62,8 @@ class DataResolver():
             'subsystems': self._data.subsystems,
 
             'env': {
-                'platform': sys.platform
+                'platform': sys.platform,
+                'cpu_count': multiprocessing.cpu_count()
             }
         })
 

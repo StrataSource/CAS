@@ -17,6 +17,17 @@
             "title": "Scripts",
             "description": "Array of Content Builder script names (without .vdf) to run.",
             "examples": [["shared", "windows"]]
+        },
+        "username": {
+            "type": "string",
+            "title": "Username",
+            "description": "Username to use to log in to Steamworks."
+        },
+        "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Password to use to log in to Steamworks.",
+            "sensitive": true
         }
     }
 }

@@ -24,13 +24,13 @@ class BuildsysSubsystem(BuildSubsystem):
             return BuildResult(False)
 
         # configure stage (run VPC, build makefiles)
-        if self.config.get('configure', True):
+        if self.config.configure:
             vpc = VPCInstance(self.env, self.config.vpc, self.config.solution)
             if not vpc.run() or not self._compiler.configure():
                 return BuildResult(False)
         
         # compile stage (compile dependencies and engine)
-        if self.config.get('compile', False):
+        if self.config.compile:
             if not self._compiler.build():
                 return BuildResult(False)
 
