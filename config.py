@@ -47,12 +47,27 @@ class DataResolver():
     """
     Class that actually does the configuration resolution
     """
-    def __init__(self, data: dict):
+    def __init__(self, data: Mapping):
         self._data = data
 
-    def _resolve_key_str(self, key: str):
+    def build_variable_scope(self, parent: Mapping, context: DataResolverContext) -> Mapping:
+        return DotMap({
+            'parent': parent,
+            'context': context,
+
+            'path': self._data.path,
+            'args': self._data.args,
+            'assets': self._data.assets,
+            'subsystems': self._data.subsystems,
+
+            'env': {
+                'platform': sys.platform
+            }
+        })
+
+    def _resolve_key_str(self, key: str, scope: Mapping):
         keys = key.split('.')
-        current = self._data
+        current = scope
         for k in keys:
             if not k in current:
                 return None
@@ -61,7 +76,7 @@ class DataResolver():
                 return current
         return None
     
-    def _inject_config_str(self, config: str) -> str:
+    def _inject_config_str(self, config: str, scope: Mapping) -> str:
         """
         A terrible lexical parser for interpolated globals.
         I.e. "build type: $(args.build)" returns "build type: trunk"
@@ -79,7 +94,7 @@ class DataResolver():
                 # read to end for key
                 inblock = True
             elif inblock and c == ')':
-                value = self._resolve_key_str(current)
+                value = self._resolve_key_str(current, scope)
                 if value is None:
                     raise Exception(f'Value of configuration variable $({current}) was None')
                 result += str(value)
@@ -93,26 +108,18 @@ class DataResolver():
             prev = c
         return result
 
-    def eval(self, condition: str, parent: dict, context: DataResolverContext) -> bool:
-        injected = self._inject_config_str(condition)
-        evaluator = simpleeval.EvalWithCompoundTypes(
-            names={
-                'config': self._data,
-                'parent': parent,
-                'context': context,
-                'utilities': utilities,
+    def eval(self, condition: str, parent: Mapping, context: DataResolverContext) -> bool:
+        scope = self.build_variable_scope(parent, context)
 
-                'env': {
-                    'platform': sys.platform
-                }
-            }
-        )
+        injected = self._inject_config_str(condition, scope)
+        evaluator = simpleeval.EvalWithCompoundTypes(names=scope)
 
         result = evaluator.eval(injected)
         #logging.debug(f'\"{cond}\" evaluated to: {result}')
+
         return result
     
-    def resolve(self, config, context: DataResolverContext):
+    def resolve(self, config, scope: Mapping):
         """
         Resolves the stored configuration into literal terms at runtime
         """
@@ -121,11 +128,11 @@ class DataResolver():
         if isinstance(config, list):
             result = []
             for k, v in enumerate(config):
-                parsed = self.resolve(v, context)
+                parsed = self.resolve(v, scope)
                 if not v or parsed is not None:
                     result.append(parsed)
         elif isinstance(config, str):
-            result = self._inject_config_str(config)
+            result = self._inject_config_str(config, scope)
         
         return result
 
@@ -145,16 +152,11 @@ class LazyDynamicBase():
         }
 
     def _transform_object(self, data):
+        scope = self._resolver.build_variable_scope(self._context, self._parent)
         for k, v in self._transform_map.items():
             if isinstance(data, k):
                 return v(data, self._resolver, self._context, self)
-        return self._resolver.resolve(data, self._context)
-
-    def resolve(self):
-        """
-        Resolves this dynamic object to its physical form
-        """
-        return self._resolver.resolve(self, self._context)
+        return self._resolver.resolve(data, scope)
 
 
 class LazyDynamicSequence(LazyDynamicBase, Sequence):
@@ -272,7 +274,7 @@ class ConfigurationUtilities():
         for k, subsystem in config['subsystems'].items():
             if k in {'@conditions', '@expressions'}:
                 continue
-            
+
             module = subsystem.module
 
             # validating third-party subsystems is not supported yet

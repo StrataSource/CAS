@@ -55,7 +55,7 @@
                     "type": "string",
                     "title": "Output Path",
                     "description": "The path where the VPK archive and control file should be created.",
-                    "default": "$(self.input)"
+                    "default": "$(parent.input)"
                 },
                 "files": {
                     "type": "array",
