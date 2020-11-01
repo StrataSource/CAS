@@ -15,17 +15,7 @@ python3 -m cas --build-category assets
 ```
 
 ## Configuration
-
-CAS is modular, and has two main types of components: drivers and subsystems.
-
-### Drivers
-Drivers handle building individual files that typically have a single input file and one or more output files. For speed, all input dependencies are hashed to avoid unnecessary rebuilds.
-
-An example of a driver is `model` - this takes a .mc or .qc input file and outputs a .mdl file.
-
-### Subsystems
-Subsystems handle actions that are unpredictable, have many side effects, or behaviour that cannot be handled by drivers.
-
+CAS executes a series of discrete programs called subsystems.
 An example of a subsystem is `vpk` - this allows packing several files into one or more VPK archives.
 
 ### Build Types and Categories
@@ -63,5 +53,8 @@ Inside conditions and macros a specific set of names are available in the local 
 - `path`, `args`, `assets`, and `subsystems` from the configuration file
 - `env`, a dict containing `platform`, the system platform, and `cpu_count`, the number of system CPUs
 
+## Installation
+You can install CAS with `pip`. Example: `python3 -m pip install cas`
+
 ## Development
-Run the setup script for your platform to install dependencies - either install_deps.bat or install_deps.sh.
+Clone this repository and run `python3 ./setup.py develop --user`.
