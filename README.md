@@ -11,7 +11,7 @@ You must run CAS from inside your project's root tree; if you need to run it fro
 
 Example:
 ```
-python3 -m cas --build-category assets
+casbuild --build-category assets
 ```
 
 ## Configuration
