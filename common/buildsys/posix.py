@@ -214,7 +214,7 @@ class PosixCompiler(BaseCompiler):
         return None
 
     def configure(self, solution: str) -> bool:
-        if not super().configure():
+        if not super().configure(solution):
             return False
 
         if not self._build_dependencies():

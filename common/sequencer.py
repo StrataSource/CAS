@@ -14,7 +14,7 @@ class Sequencer:
 
     def __init__(self, path: Path, config: dict):
         self.env = BuildEnvironment(path, config)
-        
+
         self._args = self.env.config.args
         self._subsystems = {}
         self._logger = logging.getLogger(__name__)
