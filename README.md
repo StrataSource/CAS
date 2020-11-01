@@ -58,3 +58,4 @@ You can install CAS with `pip`. Example: `python3 -m pip install cas`
 
 ## Development
 Clone this repository and run `python3 ./setup.py develop --user`.
+To remove the development link, run `python3 ./setup.py develop --user -u`.

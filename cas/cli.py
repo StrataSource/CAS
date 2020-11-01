@@ -1,15 +1,10 @@
-import sys
 import os
 import json
 import argparse
 import logging
 import multiprocessing
 from pathlib import Path
-
 from dotmap import DotMap
-
-# HACK how the fuck do you really do this
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 import cas.common.utilities as utilities
 from cas.common.sequencer import Sequencer
@@ -29,8 +24,8 @@ def _resolve_root_path() -> Path:
     return None
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Builds Source Engine assets")
+def main():
+    parser = argparse.ArgumentParser(description="Chaos Automation System CLI")
 
     parser.add_argument(
         "-p",
@@ -60,7 +55,7 @@ if __name__ == "__main__":
         help="The type of the build.",
     )
     parser.add_argument(
-        "-g",
+        "-s",
         "--build-categories",
         type=str.lower,
         help="Comma-seperated list of categories to include in the build. If not specified, all categories will be assumed.",
@@ -86,11 +81,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-i",
         "--include-subsystems",
         type=str.lower,
         help="Comma-seperated list of subsystems to include in the build.",
     )
     parser.add_argument(
+        "-x",
         "--exclude-subsystems",
         type=str.lower,
         help="Comma-seperated list of subsystems to exclude from the build.",
@@ -102,26 +99,34 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(level=logging.INFO)
 
+    logger = logging.getLogger(__name__)
+
     # if the root path is not specified, try to autodetect it
     if args.path:
         root_path = Path(args.path).resolve()
     else:
         root_path = _resolve_root_path()
     if not root_path:
-        logging.error(
-            "Couldn't find the root path. Ensure you're running assetbuilder from within a subdirectory of the root folder, or use the -p/--path argument to specify it."
+        logger.error(
+            "Couldn't find the root path. Ensure you're running CAS from within a subdirectory of the root folder, or use the -p/--path argument to specify it."
         )
         exit(1)
 
     content_path = root_path.joinpath("content")
 
+    config_file = content_path.joinpath("assets.json")
+    if not config_file.exists():
+        logger.error(
+            "Couldn't find assets.json. If you don't yet have one, please see the documentation for a template."
+        )
+        exit(1)
+
+    with config_file.open("rb") as f:
+        config = DotMap(json.load(f))
+
     cache_path = content_path.joinpath(".assets_c.json")
     if args.force and cache_path.exists():
         cache_path.unlink()
-
-    config_file = content_path.joinpath("assets.json")
-    with config_file.open("rb") as f:
-        config = DotMap(json.load(f))
 
     # apply overrides
     if not args.override:
