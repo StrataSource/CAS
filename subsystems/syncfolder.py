@@ -4,7 +4,6 @@ from pathlib import Path
 import cas.common.utilities as utilities
 
 import os
-import logging
 import shutil
 
 
@@ -25,7 +24,7 @@ class SyncFolderSubsystem(BuildSubsystem):
             to_dir.mkdir()
 
         files = utilities.rglob_multi(from_dir, self.config.files)
-        logging.debug(str(len(files)) + f" file(s) to copy")
+        self._logger.debug(str(len(files)) + f" file(s) to copy")
 
         for src in files:
             dest = to_dir.joinpath(src.relative_to(from_dir))

@@ -1,7 +1,8 @@
 from cas.common.models import BuildEnvironment
 
 import uuid
-from pathlib import Path, List, Set
+from pathlib import Path
+from typing import List, Set
 
 
 class PrecompileResult:

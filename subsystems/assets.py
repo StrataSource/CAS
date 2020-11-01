@@ -1,8 +1,8 @@
 import cas
 from cas.common.config import DefaultValidatingDraft7Validator
 from cas.common.models import BuildEnvironment, BuildResult, BuildSubsystem
-from cas.assets.cache import AssetCache
-from cas.assets.models import (
+from cas.common.assets.cache import AssetCache
+from cas.common.assets.models import (
     Asset,
     AssetBuildContext,
     BaseDriver,
@@ -20,7 +20,7 @@ import multiprocessing
 from typing import List, Sequence
 from pathlib import Path
 
-_schema_path = Path(cas.assets.__file__).absolute()
+_schema_path = Path(cas.__file__).parent.absolute().joinpath("schemas")
 
 logger = None
 
@@ -37,7 +37,7 @@ def _run_async_serial(
 
     context.logger = logger
     if not context.logger:
-        context.logger = logging.getLogger()
+        context.logger = logging.getLogger(driver.__class__.__module__)
 
     context.logger.info(f"(CC) {str(relpath)}")
     success = driver.compile(context, asset)
@@ -61,20 +61,24 @@ class AssetSubsystem(BuildSubsystem):
     def __init__(self, env: BuildEnvironment, config: dict):
         super().__init__(env, config)
 
-        self._validators = []
+        self._drivers = {}
+        self._validators = {}
 
         self._cache = AssetCache(self.env.root)
         self._cache.load()
+
+        self._args = self.env.config.args
+        self._dry_run = self._args.dry_run
 
     def _get_asset_driver(self, name: str, config: dict) -> BaseDriver:
         driver = self._drivers.get(name)
         if driver is not None:
             return driver
 
-        mod = importlib.import_module(f".drivers.{name}", __package__)
+        mod = importlib.import_module(f"cas.common.assets.drivers.{name}")
         if mod is None:
             raise Exception(f"Invalid type {name}")
-        logging.debug(f"loaded '{name}' driver")
+        self._logger.debug(f"loaded '{name}' driver")
 
         driver = mod._driver(self.env, config)
         self._drivers[name] = driver
@@ -93,7 +97,7 @@ class AssetSubsystem(BuildSubsystem):
                     json.load(f)
                 )
         if config.get("options") is not None:
-            self._validators[config.type].validate(config.options)
+            self._validators[config.type].validate(config.options._data)
 
         srcpath = Path(config.src)
         if not srcpath.exists():
@@ -123,7 +127,7 @@ class AssetSubsystem(BuildSubsystem):
 
     def _run_asset_build(self, clean: bool = False) -> bool:
         contexts = []
-        for entry in self.env.config.assets:
+        for entry in self.config.assets:
             contexts.append(self._load_asset_context(entry))
 
         hash_inputs = {}
@@ -136,7 +140,7 @@ class AssetSubsystem(BuildSubsystem):
             for asset in context.assets:
                 result = driver.precompile(context, asset)
                 if not result:
-                    logging.error("Asset dependency error!")
+                    self._logger.error("Asset dependency error!")
                     return False
 
                 if clean is True:
@@ -150,7 +154,7 @@ class AssetSubsystem(BuildSubsystem):
                 invalidated = False
                 for f in result.inputs:
                     if not os.path.exists(f):
-                        logging.error(
+                        self._logger.error(
                             f"Required dependency '{f}' could not be located!"
                         )
                         return False
@@ -170,30 +174,30 @@ class AssetSubsystem(BuildSubsystem):
                     context.buildable.append(asset)
 
         if clean is True:
-            logging.info("assets cleaned")
+            self._logger.info("assets cleaned")
             return True
 
-        logging.info(
+        self._logger.info(
             f"{len(hash_inputs)} input files, {len(hash_outputs)} output files"
         )
-        logging.info(f"{total_build} files total will be rebuilt")
+        self._logger.info(f"{total_build} files total will be rebuilt")
 
-        if self.dry_run or total_build == 0:
+        if self._dry_run or total_build == 0:
             return True
 
         # build
         # TODO: duplicated code here for singlethreaded mode, fix!
-        if self.args.threads > 1:
+        if self._args.threads > 1:
             jobs = []
-            logging.info(
-                f"running multithreaded build with {self.args.threads} threads"
+            self._logger.info(
+                f"running multithreaded build with {self._args.threads} threads"
             )
-            pool = multiprocessing.Pool(self.args.threads, initializer=_async_mod_init)
+            pool = multiprocessing.Pool(self._args.threads, initializer=_async_mod_init)
 
             try:
                 for context in contexts:
                     if len(context.buildable) <= 0:
-                        logging.warning(
+                        self._logger.warning(
                             f"no files found for a context with type {context.config.type}"
                         )
                         continue
@@ -223,13 +227,13 @@ class AssetSubsystem(BuildSubsystem):
             for job in jobs:
                 result = job.get()
                 if not result:
-                    logging.error("Build failed")
+                    self._logger.error("Build failed")
                     return False
         else:
-            logging.info(f"running singlethreaded build")
+            self._logger.info(f"running singlethreaded build")
             for context in contexts:
                 if len(context.buildable) <= 0:
-                    logging.warning(
+                    self._logger.warning(
                         f"no files found for a context with type {context.config.type}"
                     )
                     continue
@@ -243,7 +247,7 @@ class AssetSubsystem(BuildSubsystem):
                 else:
                     raise Exception("Unknown driver type")
 
-        logging.info("recalculating asset hashes...")
+        self._logger.info("recalculating asset hashes...")
         for context in contexts:
             for asset in context.buildable:
                 # save updated hashes

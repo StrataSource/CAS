@@ -13,13 +13,11 @@ class Sequencer:
     """
 
     def __init__(self, path: Path, config: dict):
-        self._drivers = {}
-        self._subsystems = {}
-
         self.env = BuildEnvironment(path, config)
-
-        self.args = self.env.config.get("args", {})
-        self.dry_run = self.args.get("dry_run", False)
+        
+        self._args = self.env.config.args
+        self._subsystems = {}
+        self._logger = logging.getLogger(__name__)
 
     def _load_subsystem(self, name: str, module: str, config: dict) -> BuildSubsystem:
         subsystem = self._subsystems.get(module)
@@ -29,13 +27,13 @@ class Sequencer:
         mod = importlib.import_module(module)
         if mod is None:
             raise Exception(f"Failed to load subsystem {mod}")
-        logging.debug(f"loaded '{module}' subsystem")
+        self._logger.debug(f"loaded '{module}' subsystem")
 
         subsystem = mod._subsystem(self.env, config)
         self._subsystems[name] = subsystem
 
     def _run_subsystem(self, scope: DataResolverScope, name: str) -> bool:
-        if self.dry_run:
+        if self._args.dry_run:
             return True
 
         # get the unresolved configuration first to run checks
@@ -45,7 +43,7 @@ class Sequencer:
 
         build_types = subsystem.get("build_types")
         if build_types and self.env.build_type not in build_types:
-            logging.debug(f"subsystem {name} skipped (build type mismatch)")
+            self._logger.debug(f"subsystem {name} skipped (build type mismatch)")
             return True
 
         categories = subsystem.get("categories")
@@ -54,7 +52,7 @@ class Sequencer:
             and categories
             and len(self.env.build_categories.intersection(set(categories))) == 0
         ):
-            logging.debug(f"subsystem {name} skipped (category mismatch)")
+            self._logger.debug(f"subsystem {name} skipped (category mismatch)")
             return True
 
         # get the full configuration
@@ -63,8 +61,8 @@ class Sequencer:
 
         # run
         sys = self._subsystems[name]
-        logging.info(f"running subsystem {name}")
-        if self.args.clean:
+        self._logger.info(f"running subsystem {name}")
+        if self._args.clean:
             if not sys.clean():
                 return False
         else:
@@ -76,8 +74,8 @@ class Sequencer:
 
     def run(self) -> bool:
         # build whitelist/blacklist
-        whitelist = self.args.include_subsystems
-        blacklist = self.args.exclude_subsystems
+        whitelist = self._args.include_subsystems
+        blacklist = self._args.exclude_subsystems
         if whitelist:
             whitelist = whitelist.split(",")
         if blacklist:
@@ -89,10 +87,10 @@ class Sequencer:
         # run subsystems
         for sub in self.env.config.subsystems.keys():
             if whitelist and sub not in whitelist:
-                logging.debug(f"subsystem {sub} skipped (not whitelisted)")
+                self._logger.debug(f"subsystem {sub} skipped (not whitelisted)")
                 continue
             if blacklist and sub in blacklist:
-                logging.debug(f"subsystem {sub} skipped (blacklisted)")
+                self._logger.debug(f"subsystem {sub} skipped (blacklisted)")
                 continue
             if not self._run_subsystem(scope, sub):
                 return False

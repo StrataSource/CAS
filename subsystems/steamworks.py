@@ -2,7 +2,6 @@ from cas.common.models import BuildResult, BuildSubsystem
 from pathlib import Path
 
 import sys
-import logging
 import getpass
 
 
@@ -40,7 +39,7 @@ class SteamworksSubsystem(BuildSubsystem):
         for script in self.config.scripts:
             script_file = tool_dir.joinpath("scripts", f"app_build_{script}.vdf")
             if not script_file.exists():
-                logging.error(f'Unable to find SteamCMD script at "{script_file}"!')
+                self._logger.error(f'Unable to find SteamCMD script at "{script_file}"!')
                 return False
             script_cmd.append("+run_app_build_http")
             script_cmd.append(script_file)

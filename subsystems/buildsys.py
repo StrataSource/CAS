@@ -5,7 +5,6 @@ from cas.common.buildsys.vpc import VPCInstance
 
 import os
 import sys
-import logging
 from pathlib import Path
 
 
@@ -20,7 +19,7 @@ class BuildsysSubsystem(BuildSubsystem):
     def build(self) -> BuildResult:
         # force clean for staging/release
         if self.env.build_type != "trunk" and not self._compiler.clean():
-            logging.error("Mandatory clean for staging/release builds failed!")
+            self._logger.error("Mandatory clean for staging/release builds failed!")
             return BuildResult(False)
 
         # configure stage (run VPC, build makefiles)
@@ -39,7 +38,7 @@ class BuildsysSubsystem(BuildSubsystem):
     def clean(self) -> bool:
         # clean output files before we delete project files!
         if not self._compiler.clean():
-            logging.error("Output binary clean failed!")
+            self._logger.error("Output binary clean failed!")
             return False
 
         sln_ext = f"{self.env.platform}.sln"

@@ -6,7 +6,6 @@ import cas.common.utilities as utilities
 
 import os
 import hashlib
-import logging
 
 import vdf
 
@@ -106,7 +105,7 @@ class VPKBuildSubsystem(BuildSubsystem):
 
         files = utilities.rglob_multi(input_path, config.get("files", []))
         if len(files) == 0:
-            logging.warning("VPK: No files to pack!")
+            self._logger.warning("No files to pack!")
             return
 
         return VPKArchive(self, prefix, input_path, output_path, files)
@@ -115,9 +114,9 @@ class VPKBuildSubsystem(BuildSubsystem):
         outputs = {"files": []}
         for f in self.config.packfiles:
             vpk = self._get_vpk(f)
-            logging.info(f"VPK: Packing {len(vpk.files)} files into {vpk.prefix}")
+            self._logger.info(f"Packing {len(vpk.files)} files into {vpk.prefix}")
             if not vpk.pack():
-                logging.error(f"VPK: Failed to pack {vpk.prefix}!")
+                self._logger.error(f"Failed to pack {vpk.prefix}!")
                 return BuildResult(False)
 
             # capture the file patterns so we can pass them to other subsystems later

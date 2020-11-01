@@ -137,6 +137,9 @@ class BuildSubsystem:
     def __init__(self, env: BuildEnvironment, config: dict):
         self.env = env
         self.config = config
+        
+        mod = self.__class__.__module__
+        self._logger = logging.getLogger(mod)
 
     def build(self) -> BuildResult:
         """
