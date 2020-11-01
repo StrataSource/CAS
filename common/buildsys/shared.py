@@ -1,18 +1,13 @@
 from cas.common.models import BuildEnvironment
+from typing import Mapping
 
-import os
-import sys
-import subprocess
-import hashlib
-import logging
-from typing import List, Dict
-from pathlib import Path
 
-class BaseCompiler():
+class BaseCompiler:
     """
     Base compiler class from which all compilers should extend.
     """
-    def __init__(self, env: BuildEnvironment, config: dict):
+
+    def __init__(self, env: BuildEnvironment, config: Mapping):
         self._env = env
         self._config = config
 

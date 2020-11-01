@@ -1,26 +1,36 @@
 from cas.common.models import BuildEnvironment
-from cas.common.assets.models import Asset, AssetBuildContext, PrecompileResult
 
 import uuid
+from pathlib import Path, List, Set
 
-class AssetBuildContext():
+
+class PrecompileResult:
+    def __init__(self, inputs: Set[Path], outputs: Set[Path]):
+        self.inputs = inputs
+        self.outputs = outputs
+
+
+class AssetBuildContext:
     """
     A collection of assets with shared configuration
     """
+
     def __init__(self, config: dict):
         self.assets = []
         self.buildable = []
         self.config = config
 
-class Asset():
+
+class Asset:
     """
     Represents an asset to be compiled
     """
+
     def __init__(self, path: Path, config: dict):
         self.id = uuid.uuid4()
         self.path = path
         self.config = config
-    
+
     def get_id(self):
         """
         Returns the unique identifier for this asset
@@ -28,10 +38,11 @@ class Asset():
         return self.id
 
 
-class BaseDriver():
+class BaseDriver:
     """
     Represents an instance of a tool that compiles assets
     """
+
     def __init__(self, env: BuildEnvironment, config: dict):
         self.env = env
         self.config = config
@@ -39,7 +50,7 @@ class BaseDriver():
 
     def _tool_name(self):
         raise NotImplementedError()
-    
+
     def precompile(self, context: AssetBuildContext, asset: Asset) -> PrecompileResult:
         """
         Checks to ensure all required files are present

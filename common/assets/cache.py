@@ -1,27 +1,27 @@
 import cas.common.utilities as utilities
-from cas.models import BuildEnvironment
 
-import hashlib
 import json
 import os
 from pathlib import Path
 
-class AssetCache():
+
+class AssetCache:
     """
     Implements a cache of asset file hashes
     """
+
     def __init__(self, path: Path):
         self.path = path
-        self.file = path.joinpath(path, 'content', '.assets_c.json')
+        self.file = path.joinpath(path, "content", ".assets_c.json")
         self.hashes = {}
 
     def load(self):
         if os.path.exists(self.file):
-            with open(self.file, 'r') as f:
+            with open(self.file, "r") as f:
                 self.hashes = json.loads(f.read())
 
     def save(self):
-        with open(self.file, 'w') as f:
+        with open(self.file, "w") as f:
             f.write(json.dumps(self.hashes))
 
     def validate(self, path: Path):
@@ -35,6 +35,8 @@ class AssetCache():
 
     def put(self, path: Path):
         if not path.exists():
-            raise Exception(f'Tried to insert the path \"{str(path)}\" into the cache, which does not exist!')
+            raise Exception(
+                f'Tried to insert the path "{str(path)}" into the cache, which does not exist!'
+            )
         rel = path.relative_to(self.path)
         self.hashes[str(rel)] = utilities.hash_file_sha256(path)

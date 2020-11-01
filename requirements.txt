@@ -1,8 +1,12 @@
-jsonschema
-simpleeval
-appdirs
-dotmap
-tqdm
-vdf
+# install from setup.py
+-e .
 
-git+https://github.com/TeamSpen210/srctools#egg=srctools
+# development dependencies
+black
+flake8
+pytest
+pytest-runner
+pytest-flake8
+pytest-black
+pytest-cov
+pytest-xdist

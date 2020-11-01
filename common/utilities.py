@@ -1,9 +1,6 @@
 import os
 import sys
-import zlib
-import pathlib
 import hashlib
-import functools
 import struct
 import logging
 
@@ -11,6 +8,7 @@ import tqdm
 
 from pathlib import Path
 from typing import List
+
 
 class TqdmLoggingHandler(logging.Handler):
     def __init__(self, level=logging.NOTSET):
@@ -23,7 +21,7 @@ class TqdmLoggingHandler(logging.Handler):
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
+        except Exception:
             self.handleError(record)
 
 
@@ -36,7 +34,7 @@ def relative_paths(root: Path, paths: list) -> List[str]:
     for path in paths:
         # more hacks for exclusions I'm not happy about
         # maybe we should subclass Path to make this cleaner?
-        exclusion = path.startswith('!')
+        exclusion = path.startswith("!")
         if exclusion:
             path = path[1:]
 
@@ -51,7 +49,7 @@ def relative_paths(root: Path, paths: list) -> List[str]:
             raise NotImplementedError()
 
         if exclusion:
-            inp = '!' + inp
+            inp = "!" + inp
         result.append(inp)
     return result
 
@@ -62,11 +60,11 @@ def rglob_invert(patterns: List[str]) -> List[str]:
     """
     result = []
     for pattern in patterns:
-        if pattern.startswith('!'):
+        if pattern.startswith("!"):
             result.append(pattern[1:])
         else:
-            assert '!' not in pattern
-            result.append('!' + pattern)
+            assert "!" not in pattern
+            result.append("!" + pattern)
     return result
 
 
@@ -77,7 +75,7 @@ def rglob_multi(root: Path, patterns: List[str]) -> List[Path]:
     files = []
     for pattern in patterns:
         # patterns starting with ! are treated as exclusions
-        exclusion = pattern.startswith('!')
+        exclusion = pattern.startswith("!")
         if exclusion:
             pattern = pattern[1:]
 
@@ -104,7 +102,7 @@ def paths_to_relative(root, paths):
 
 def hash_file_sha256(path: Path):
     hash = hashlib.sha256()
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         while True:
             data = f.read(65536)
             if not data:
@@ -115,22 +113,22 @@ def hash_file_sha256(path: Path):
 
 def resolve_platform_name():
     plat = sys.platform
-    arch = struct.calcsize('P') * 8
+    arch = struct.calcsize("P") * 8
     assert arch in [32, 64]
 
-    if plat == 'win32':
-        plat = 'win'
-    elif plat.startswith('darwin'):
-        plat = 'osx'
-    elif plat.startswith('linux'):
+    if plat == "win32":
+        plat = "win"
+    elif plat.startswith("darwin"):
+        plat = "osx"
+    elif plat.startswith("linux"):
         pass
     else:
-        raise Exception(f'Unsupported platform {plat}')
-    return f'{plat}{str(arch)}'
+        raise Exception(f"Unsupported platform {plat}")
+    return f"{plat}{str(arch)}"
 
 
 def set_dot_notation(target: dict, key: str, value):
-    keys = key.split('.')
+    keys = key.split(".")
     pre = target
     pre_k = None
     last = target

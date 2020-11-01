@@ -1,23 +1,19 @@
 import cas.common.utilities as utilities
-from cas.common.steamtools import SteamInstance, SteamApp
+from cas.common.steamtools import SteamInstance
 from cas.common.config import ConfigurationUtilities
 
-from typing import List, Set
 from pathlib import Path
 import os
 import sys
-import uuid
-import json
 import logging
 import subprocess
-import pprint
 
-from dotmap import DotMap
 
-class BuildEnvironment():
+class BuildEnvironment:
     """
     Contains attributes about the current build environment
     """
+
     def __init__(self, path: str, config: dict):
         self.config = ConfigurationUtilities.parse_root_config(path, config)
 
@@ -26,11 +22,11 @@ class BuildEnvironment():
 
         categories = self.config.args.build_categories
         if categories:
-            categories = categories.split(',')
+            categories = categories.split(",")
             self.build_categories = frozenset(categories)
 
         self.verbose = self.config.args.verbose
-        
+
         self.root = self.config.path.root
         self.content = self.config.path.content
         self.game = self.config.path.game
@@ -51,52 +47,55 @@ class BuildEnvironment():
 
     def _check_autodetect_appid(self) -> bool:
         if self.src.exists():
-            logging.debug('appid autodetect skipped - src dir exists')
+            logging.debug("appid autodetect skipped - src dir exists")
             return False
-        elif self.get_tool('chaos').exists():
-            logging.debug('appid autodetect skipped - chaos executable exists')
+        elif self.get_tool("chaos").exists():
+            logging.debug("appid autodetect skipped - chaos executable exists")
             return False
 
         return True
 
     def _setup_bindir(self):
-        self.bindir = self.game.joinpath('bin', self.platform)
-        override = self.config.options.get('bin_path')
+        self.bindir = self.game.joinpath("bin", self.platform)
+        override = self.config.options.get("bin_path")
 
         # we have a bin path override
         if override is not None:
             self.bindir = Path(override).joinpath(self.platform)
         # we're a mod (modwrapper present but no game executable) - autodetect bin path from appid
         elif self._check_autodetect_appid():
-            appid = self.config.options.get('bin_appid')
+            appid = self.config.options.get("bin_appid")
             if appid is not None:
-                logging.debug(f'mod detected - using base appid {str(appid)}')
-                self.bindir = self._get_appid_folder(appid).joinpath('bin', self.platform)
+                logging.debug(f"mod detected - using base appid {str(appid)}")
+                self.bindir = self._get_appid_folder(appid).joinpath(
+                    "bin", self.platform
+                )
 
         if not self.bindir.exists():
-            raise Exception('Could not find the bin directory')
+            raise Exception("Could not find the bin directory")
 
-        logging.debug(f'using bin directory {self.bindir}')
+        logging.debug(f"using bin directory {self.bindir}")
 
     """
     Retrieves the absolute path to the tool at the specified source path.
     If the source path is None, it will default to self.bindir.
     """
+
     def get_tool(self, tool: str, src: Path = None) -> Path:
         if src is None:
             src = self.bindir
-        assert not tool.endswith('.exe')
-        if sys.platform == 'win32':
-            tool += '.exe'
+        assert not tool.endswith(".exe")
+        if sys.platform == "win32":
+            tool += ".exe"
         return src.joinpath(tool).resolve()
 
     def get_lib(self, lib: str) -> Path:
-        if sys.platform == 'win32':
-            lib += '.dll'
-        elif sys.platform == 'darwin':
-            lib += '.dylib'
-        elif sys.platform == 'linux':
-            lib += '.so'
+        if sys.platform == "win32":
+            lib += ".dll"
+        elif sys.platform == "darwin":
+            lib += ".dylib"
+        elif sys.platform == "linux":
+            lib += ".so"
         else:
             raise NotImplementedError()
         return self.bindir.joinpath(lib).resolve()
@@ -104,54 +103,50 @@ class BuildEnvironment():
     def run_subprocess(self, *args, **kwargs):
         predef = {}
         if not self.verbose:
-            predef['stdout'] = subprocess.DEVNULL
-            predef['stderr'] = subprocess.DEVNULL
+            predef["stdout"] = subprocess.DEVNULL
+            predef["stderr"] = subprocess.DEVNULL
         return subprocess.run(*args, **dict(predef, **kwargs))
 
     def run_tool(self, *args, **kwargs) -> int:
         predef = {}
-        predef['env'] = os.environ
-        predef['env']['VPROJECT'] = str(self.config.path.vproject)
-        
+        predef["env"] = os.environ
+        predef["env"]["VPROJECT"] = str(self.config.path.vproject)
+
         try:
             result = self.run_subprocess(*args, **dict(predef, **kwargs))
         except Exception as e:
-            raise Exception(f'failed to execute tool with parameters: {args}') from e
+            raise Exception(f"failed to execute tool with parameters: {args}") from e
         return result.returncode
 
 
-class BuildResult():
+class BuildResult:
     """
     Represents a result returned from a subsystem
     """
+
     def __init__(self, success: bool, outputs: dict = {}):
         self.success = success
         self.outputs = outputs
 
 
-class BuildSubsystem():
+class BuildSubsystem:
     """
     Represents a build system that implements custom behaviour.
     """
+
     def __init__(self, env: BuildEnvironment, config: dict):
         self.env = env
         self.config = config
-    
+
     def build(self) -> BuildResult:
         """
         Invokes the build logic of the subsystem.
         Returns a BuildResult with the result.
         """
         raise NotImplementedError()
-    
+
     def clean(self) -> bool:
         """
         Removes all the output files generated by this subsystem.
         """
         raise NotImplementedError()
-
-
-class PrecompileResult():
-    def __init__(self, inputs: Set[Path], outputs: Set[Path]):
-        self.inputs = inputs
-        self.outputs = outputs

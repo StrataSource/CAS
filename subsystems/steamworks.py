@@ -1,61 +1,60 @@
 from cas.common.models import BuildResult, BuildSubsystem
-from typing import List
 from pathlib import Path
 
-import os
 import sys
-import subprocess
-import hashlib
 import logging
 import getpass
+
 
 class SteamworksSubsystem(BuildSubsystem):
     """
     Subsystem that pushes app depots to Steamworks using the content builder.
     App and depot configurations are generated on the fly
     """
+
     def _get_credentials(self):
         user = self.config.username
         pwd = self.config.password
         if not user or not pwd:
-            print('Enter Steamworks Credentials')
+            print("Enter Steamworks Credentials")
             if not user:
-                user = input('Username: ')
+                user = input("Username: ")
             if not pwd:
-                pwd = getpass.getpass(prompt='Password: ')
+                pwd = getpass.getpass(prompt="Password: ")
         return user, pwd
 
     def _run_steamcmd(self) -> bool:
         tool_dir = Path(self.config.tooldir).resolve()
         tool_path = None
-        
-        if sys.platform == 'win32':
-            tool_path = tool_dir.joinpath('builder', 'steamcmd.exe')
-        elif sys.platform == 'darwin':
-            tool_path = tool_dir.joinpath('builder_osx', 'steamcmd.sh')
-        elif sys.platform == 'linux':
-            tool_path = tool_dir.joinpath('builder_linux', 'steamcmd.sh')
+
+        if sys.platform == "win32":
+            tool_path = tool_dir.joinpath("builder", "steamcmd.exe")
+        elif sys.platform == "darwin":
+            tool_path = tool_dir.joinpath("builder_osx", "steamcmd.sh")
+        elif sys.platform == "linux":
+            tool_path = tool_dir.joinpath("builder_linux", "steamcmd.sh")
         else:
-            raise NotImplementedError(f'unsupported platform {sys.platform}')
-        
+            raise NotImplementedError(f"unsupported platform {sys.platform}")
+
         script_cmd = []
         for script in self.config.scripts:
-            script_file = tool_dir.joinpath('scripts', f'app_build_{script}.vdf')
+            script_file = tool_dir.joinpath("scripts", f"app_build_{script}.vdf")
             if not script_file.exists():
-                logging.error(f'Unable to find SteamCMD script at \"{script_file}\"!')
+                logging.error(f'Unable to find SteamCMD script at "{script_file}"!')
                 return False
-            script_cmd.append('+run_app_build_http')
+            script_cmd.append("+run_app_build_http")
             script_cmd.append(script_file)
 
         user, pwd = self._get_credentials()
-        args = [tool_path, '+login', user, pwd] + script_cmd + ['+quit']
+        args = [tool_path, "+login", user, pwd] + script_cmd + ["+quit"]
         ret = self.env.run_tool(args, cwd=self.env.src)
         return ret == 0
 
     def build(self) -> BuildResult:
         return BuildResult(self._run_steamcmd())
-    
+
     def clean(self) -> bool:
         return True
+
 
 _subsystem = SteamworksSubsystem
