@@ -57,5 +57,6 @@ Inside conditions and macros a specific set of names are available in the local 
 You can install CAS with `pip`. Example: `python3 -m pip install cas`
 
 ## Development
-Clone this repository and run `python3 ./setup.py develop --user`.
-To remove the development link, run `python3 ./setup.py develop --user -u`.
+- To install, run `python3 ./setup.py develop --user`.
+- To remove the development link, run `python3 ./setup.py develop --user -u`.
+- To publish to PyPi, run `publish.sh`.
