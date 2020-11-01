@@ -1,22 +1,22 @@
-# AssetBuilder
+# Chaos Automation System
 
-AssetBuilder is a Python toolkit for compiling Source Engine assets.
+Chaos Automation System (CAS) is a toolkit for automating complex sequences of tasks; generally, Source engine tasks.
 
 ## Usage
-AssetBuilder, by default, expects a certain folder structure to be present. You should have a root folder for your project, containing a `content` folder and a `game` folder. The latter contains your compiled assets, while the former contains your source content.
+CAS, by default, expects a certain folder structure to be present. You should have a root folder for your project, containing a `content` folder and a `game` folder. The former contains your source content, while your latter contains your compiled assets and binaries.
 
 To configure which assets to build, an `assets.json` file must be present in your `content` folder. An example of this is present in the `examples` folder of this repository, which you can copy if you want to provide a template for your project.
 
-You must run AssetBuilder from inside your root folder; if you need to run it from somewhere else, use the `--path` argument.
+You must run CAS from inside your project's root tree; if you need to run it from somewhere else, use the `--path` argument.
 
 Example:
 ```
-python3 ./cli.py --build-category assets
+python3 -m cas --build-category assets
 ```
 
 ## Configuration
 
-AssetBuilder is modular, and has two main types of components: drivers and subsystems.
+CAS is modular, and has two main types of components: drivers and subsystems.
 
 ### Drivers
 Drivers handle building individual files that typically have a single input file and one or more output files. For speed, all input dependencies are hashed to avoid unnecessary rebuilds.
@@ -34,14 +34,14 @@ The **build type** (`--build-type`) selects the type of the build you want to pe
 The **build categories** (`--build-categories`) define whether assets should be built and what subsystems should run, if any. The default is to build all categories if one is not explicitly specified. If a category different from `assets` is specified, assets will not be built. The categories of a subsystem can be defined with the `categories` key.
 
 ### Expressions and Conditions
-AssetBuilder has support for conditional statements to include or exclude segments of configuration whenever a condition is met. Specify the conditions inside the block you want to set as a list with the special `@conditions` key.
+CAS has support for conditional statements to include or exclude segments of configuration whenever a condition is met. Specify the conditions inside the block you want to set as a list with the special `@conditions` key.
 
 
-AssetBuilder also has support for custom expressions with `@expressions`, to dynamically modify parts of configuration on the fly. Specify this as a set with each key you want to modify. It uses the same syntax as conditions.
+CAS also has support for custom expressions with `@expressions`, to dynamically modify parts of configuration on the fly. Specify this as a set with each key you want to modify. It uses the same syntax as conditions.
 
 Example:
 ```json
-"module": "assetbuilder.subsystems.syncfolder",
+"module": "cas.subsystems.syncfolder",
 "category": "publish",
 "options": {
     "from": "$(path.root)/game",
@@ -59,7 +59,7 @@ Note that expressions are always evaluated before conditions in the same block.
 ### Local scope
 Inside conditions and macros a specific set of names are available in the local scope:
 - `parent`, the parent object of this value
-- `context`, the current resolution context
+- `context`, the current resolver scope
 - `path`, `args`, `assets`, and `subsystems` from the configuration file
 - `env`, a dict containing `platform`, the system platform, and `cpu_count`, the number of system CPUs
 

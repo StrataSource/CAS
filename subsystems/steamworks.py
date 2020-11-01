@@ -1,4 +1,4 @@
-from assetbuilder.models import BuildResult, BuildSubsystem
+from cas.common.models import BuildResult, BuildSubsystem
 from typing import List
 from pathlib import Path
 
@@ -8,8 +8,6 @@ import subprocess
 import hashlib
 import logging
 import getpass
-
-
 
 class SteamworksSubsystem(BuildSubsystem):
     """

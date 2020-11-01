@@ -1,8 +1,8 @@
-from assetbuilder.models import BuildResult, BuildSubsystem
+from cas.common.models import BuildResult, BuildSubsystem
 from typing import List
 from pathlib import Path
 
-import assetbuilder.utilities as utilities
+import cas.common.utilities as utilities
 
 import os
 import sys

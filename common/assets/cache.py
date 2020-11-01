@@ -1,5 +1,5 @@
-import assetbuilder.utilities as utilities
-from assetbuilder.models import BuildEnvironment
+import cas.common.utilities as utilities
+from cas.models import BuildEnvironment
 
 import hashlib
 import json

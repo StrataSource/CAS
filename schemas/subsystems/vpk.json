@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
-    "$id": "https://chaosinitiative.com/assetbuilder/schema/subsystems/vpk.json",
+    "$id": "https://chaosinitiative.com/cas/schemas/subsystems/vpk.json",
 
     "title": "VPK Packer Options",
     "type": "object",

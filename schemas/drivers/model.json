@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
-    "$id": "https://chaosinitiative.com/assetbuilder/schema/drivers/model.json",
+    "$id": "https://chaosinitiative.com/cas/schemas/drivers/model.json",
 
     "type": "object",
     "title": "Model",

@@ -1,4 +1,4 @@
-from assetbuilder.models import BuildEnvironment
+from cas.common.models import BuildEnvironment
 
 import os
 import sys

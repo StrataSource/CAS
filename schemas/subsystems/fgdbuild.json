@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
-    "$id": "https://chaosinitiative.com/assetbuilder/schema/subsystems/fgdbuild.json",
+    "$id": "https://chaosinitiative.com/cas/schemas/subsystems/fgdbuild.json",
 
     "title": "FGD Builder Options",
     "type": "object",

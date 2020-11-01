@@ -1,4 +1,5 @@
-import assetbuilder.utilities as utilities
+import cas
+import cas.common.utilities as utilities
 
 import os
 import ast
@@ -31,8 +32,7 @@ def extend_validator_with_default(validator_class):
 
 DefaultValidatingDraft7Validator = extend_validator_with_default(jsonschema.Draft7Validator)
 
-
-class DataResolverContext():
+class DataResolverScope():
     def __init__(self):
         self.results = DotMap()
 
@@ -43,7 +43,6 @@ class DataResolverContext():
         files = self.get_subsystem_output(subsystem, 'files')
         return utilities.rglob_invert(utilities.relative_paths(root, files))
 
-
 class DataResolver():
     """
     Class that actually does the configuration resolution
@@ -51,10 +50,10 @@ class DataResolver():
     def __init__(self, data: Mapping):
         self._data = data
 
-    def build_variable_scope(self, parent: Mapping, context: DataResolverContext) -> Mapping:
+    def build_eval_locals(self, parent: Mapping, scope: DataResolverScope) -> Mapping:
         return DotMap({
             'parent': parent,
-            'context': context,
+            'context': scope,
 
             'path': self._data.path,
             'args': self._data.args,
@@ -67,9 +66,9 @@ class DataResolver():
             }
         })
 
-    def _resolve_key_str(self, key: str, scope: Mapping):
+    def _resolve_key_str(self, key: str, eval_locals: Mapping):
         keys = key.split('.')
-        current = scope
+        current = eval_locals
         for k in keys:
             if not k in current:
                 return None
@@ -78,7 +77,7 @@ class DataResolver():
                 return current
         return None
     
-    def _inject_config_str(self, config: str, scope: Mapping) -> str:
+    def _inject_config_str(self, config: str, eval_locals: Mapping) -> str:
         """
         A terrible lexical parser for interpolated globals.
         I.e. "build type: $(args.build)" returns "build type: trunk"
@@ -96,7 +95,7 @@ class DataResolver():
                 # read to end for key
                 inblock = True
             elif inblock and c == ')':
-                value = self._resolve_key_str(current, scope)
+                value = self._resolve_key_str(current, eval_locals)
                 if value is None:
                     raise Exception(f'Value of configuration variable $({current}) was None')
                 result += str(value)
@@ -110,11 +109,11 @@ class DataResolver():
             prev = c
         return result
 
-    def eval(self, condition: str, parent: Mapping, context: DataResolverContext) -> bool:
-        scope = self.build_variable_scope(parent, context)
+    def eval(self, condition: str, parent: Mapping, scope: DataResolverScope) -> bool:
+        eval_locals = self.build_eval_locals(parent, scope)
 
-        injected = self._inject_config_str(condition, scope)
-        evaluator = simpleeval.EvalWithCompoundTypes(names=scope)
+        injected = self._inject_config_str(condition, eval_locals)
+        evaluator = simpleeval.EvalWithCompoundTypes(names=eval_locals)
 
         result = evaluator.eval(injected)
         #logging.debug(f'\"{cond}\" evaluated to: {result}')
@@ -138,15 +137,14 @@ class DataResolver():
         
         return result
 
-
 class LazyDynamicBase():
     """
     Base object that allows lazy resolution of configuration data
     """
-    def __init__(self, data = None, resolver: DataResolver = None, context = None, parent = None):
+    def __init__(self, data = None, resolver: DataResolver = None, scope: DataResolverScope = None, parent = None):
         self._data = data
         self._resolver = resolver
-        self._context = context
+        self._scope = scope
         self._parent = parent
         self._transform_map = {
             list: LazyDynamicSequence,
@@ -154,19 +152,18 @@ class LazyDynamicBase():
         }
 
     def _transform_object(self, data):
-        scope = self._resolver.build_variable_scope(self._context, self._parent)
+        eval_locals = self._resolver.build_eval_locals(self._scope, self._parent)
         for k, v in self._transform_map.items():
             if isinstance(data, k):
-                return v(data, self._resolver, self._context, self)
-        return self._resolver.resolve(data, scope)
-
+                return v(data, self._resolver, self._scope, self)
+        return self._resolver.resolve(data, eval_locals)
 
 class LazyDynamicSequence(LazyDynamicBase, Sequence):
     """
     Lazy dynamic implementation of Sequence.
     """
-    def __init__(self, data: Sequence = [], resolver: DataResolver = None, context = None, parent = None):
-        super().__init__(data, resolver, context)
+    def __init__(self, data: Sequence = [], resolver: DataResolver = None, scope: DataResolverScope = None, parent = None):
+        super().__init__(data, resolver, scope)
 
     def __getitem__(self, key):
         return self._transform_object(self._data[key])
@@ -174,16 +171,15 @@ class LazyDynamicSequence(LazyDynamicBase, Sequence):
     def __len__(self):
         return len(self._data)
 
-    def with_context(self, context: DataResolverContext):
-        return LazyDynamicSequence(self._data, self._resolver, context)
-
+    def with_scope(self, scope: DataResolverScope):
+        return LazyDynamicSequence(self._data, self._resolver, scope)
 
 class LazyDynamicMapping(LazyDynamicBase, Mapping):
     """
     Lazy dynamic implementation of Mapping.
     """
-    def __init__(self, data: Mapping = {}, resolver: DataResolver = None, context = None, parent = None):
-        super().__init__(data, resolver, context)
+    def __init__(self, data: Mapping = {}, resolver: DataResolver = None, scope: DataResolverScope = None, parent = None):
+        super().__init__(data, resolver, scope)
         self._expressions = self._data.get('@expressions', {})
         self._conditions = self._data.get('@conditions', {})
 
@@ -194,7 +190,7 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
         if key in {'@expressions', '@conditions'}:
             return False
         condition = self._conditions.get(key)
-        if isinstance(condition, str) and not self._resolver.eval(condition, self._parent, self._context):
+        if isinstance(condition, str) and not self._resolver.eval(condition, self._parent, self._scope):
             return False
         return True
 
@@ -204,7 +200,7 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
         """
         expression = self._expressions.get(key)
         if isinstance(expression, str):
-            value = self._resolver.eval(expression, self._parent, self._context)
+            value = self._resolver.eval(expression, self._parent, self._scope)
 
         return self._transform_object(value)
     
@@ -224,55 +220,40 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
 
         return self._transform_kv(key, result)
 
-    def with_context(self, context: DataResolverContext):
-        return LazyDynamicMapping(self._data, self._resolver, context)
-
+    def with_scope(self, scope: DataResolverScope):
+        return LazyDynamicMapping(self._data, self._resolver, scope)
 
 class LazyDynamicDotMap(LazyDynamicMapping):
     """
     Lazy dynamic implementation of DotMap.
     """
-    def __init__(self, data: Mapping = {}, resolver: DataResolver = None, context = None, parent = None):
-        super().__init__(data, resolver, context)
+    def __init__(self, data: Mapping = {}, resolver: DataResolver = None, scope: DataResolverScope = None, parent = None):
+        super().__init__(data, resolver, scope)
 
         dmap = DotMap()
         dmap._map = self._data
         self._data = dmap
 
     def __getattr__(self, k):
-        if k in {'_data','_resolver','_context','_transform_map','_expressions','_conditionals','_dotmap'}:
+        if k in {'_data','_resolver','_scope','_transform_map','_expressions','_conditionals','_dotmap'}:
             return super(self.__class__, self).__getattribute__(k)
         return self._transform_kv(k, self._data.__getattr__(k))
 
-    def with_context(self, context):
-        return LazyDynamicDotMap(self._data, self._resolver, context)
-
+    def with_scope(self, scope):
+        return LazyDynamicDotMap(self._data, self._resolver, scope)
 
 class ConfigurationUtilities():
     @staticmethod
     def parse_root_config(root: Path, config: dict) -> dict:
-        # validate the schema
-        schema_path = Path(__file__).parent.absolute().joinpath('schemas')
+        # validate the root schema
+        schema_path = Path(cas.__file__).parent.absolute().joinpath('schemas')
         with open(schema_path.joinpath('root.json'), 'r') as f:
             root_schema = json.load(f)
         DefaultValidatingDraft7Validator(root_schema).validate(config)
 
-        # validate all driver options
-        drv_validators = {}
-        for asset in config['assets']:
-            if asset.type not in drv_validators:
-                driver_path = schema_path.joinpath('drivers', f'{asset.type}.json')
-                if not driver_path.exists():
-                    raise Exception(f'unable to find schema for asset driver \'{asset.type}\'')
-                with open(driver_path, 'r') as f:
-                    drv_validators[asset.type] = DefaultValidatingDraft7Validator(json.load(f))
-            if asset.get('options') is None:
-                continue
-            drv_validators[asset.type].validate(asset.options)
-
         # validate all subsystem options
-        sub_validators = {}
-        sub_prefix = 'assetbuilder.subsystems.'
+        validators = {}
+        prefix = 'cas.subsystems.'
         for k, subsystem in config['subsystems'].items():
             if k in {'@conditions', '@expressions'}:
                 continue
@@ -280,19 +261,19 @@ class ConfigurationUtilities():
             module = subsystem.module
 
             # validating third-party subsystems is not supported yet
-            if not module.startswith(sub_prefix):
+            if not module.startswith(prefix):
                 continue
-            sub_name = module[len(sub_prefix):]
+            sub_name = module[len(prefix):]
 
-            if sub_name not in sub_validators:
+            if sub_name not in validators:
                 sub_path = schema_path.joinpath('subsystems', f'{sub_name}.json')
                 if not sub_path.exists():
                     raise Exception(f'unable to find schema for subsystem \'{sub_name}\'')
                 with open(sub_path, 'r') as f:
-                    sub_validators[sub_name] = DefaultValidatingDraft7Validator(json.load(f))
+                    validators[sub_name] = DefaultValidatingDraft7Validator(json.load(f))
             if subsystem.get('options') is None:
                 continue
-            sub_validators[sub_name].validate(subsystem.options)
+            validators[sub_name].validate(subsystem.options)
             
         # setup the dotmap that we'll use to perform lazy resolution
         config = DotMap(config)

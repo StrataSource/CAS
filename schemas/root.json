@@ -1,12 +1,12 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://chaosinitiative.com/assetbuilder/schema/root.json",
+    "$id": "https://chaosinitiative.com/cas/schemas/root.json",
 
     "type": "object",
     "title": "Configuration",
     "description": "Root AssetBuilder configuration",
     
-    "required": ["options", "assets", "subsystems"],
+    "required": ["options", "subsystems"],
     "properties": {
         "options": {
             "type": "object",
@@ -29,13 +29,6 @@
                 }
             }
         },
-        "assets": {
-            "type": "array",
-            "title": "Assets",
-            "description": "Array of asset build entries.",
-            
-            "items": { "$ref": "#/definitions/asset" }
-        },
         "subsystems": {
             "type": "object",
             "title": "Subsystems",
@@ -49,60 +42,6 @@
     },
 
     "definitions": {
-        "asset": {
-            "type": "object",
-            "title": "Asset",
-            "description": "An entry instructing which asset(s) to build.",
-            
-            "required": ["type", "files"],
-            "properties": {
-                "type": {
-                    "type": "string",
-                    "title": "Type",
-                    "description": "The type of the asset."
-                },
-                "src": {
-                    "type": "string",
-                    "title": "Source Folder",
-                    "description": "The asset source folder.",
-                    
-                    "default": "$(path.content)",
-                    "examples": ["$(path.content)"]
-                },
-                "dest": {
-                    "type": "string",
-                    "title": "Destination Folder",
-                    "description": "The asset destination folder.",
-                    
-                    "default": "$(path.game)",
-                    "examples": ["$(path.game)"]
-                },
-                "files": {
-                    "title": "Files",
-                    "description": "A pattern or array of patterns describing what assets to build.",
-
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "array",
-                            "items": { "type": "string" }
-                        }
-                    ],
-
-                    "examples": ["p2ce/resource/closecaption_*.txt"]
-                },
-                "options": {
-                    "type": "object",
-                    "title": "Options",
-                    "description": "Options to pass to the driver.",
-                    
-                    "additionalProperties": true,
-                    "examples": [{"foobar": 1234}]
-                }
-            }
-        },
         "subsystem": {
             "title": "Subsystem",
             "description": "An entry to run a specific subsystem.",

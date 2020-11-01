@@ -4,14 +4,14 @@ with open('README.md', 'r') as f:
     long_description = f.read()
 
 setuptools.setup(
-    name='assetbuilder',
+    name='cas',
     version='1.0.0',
     author='Chaos Initiative',
     author_email='contact@chaosinitiative.com',
-    description='',
+    description='Chaos Automation System',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/ChaosInitiative/AssetBuilder',
+    url='https://github.com/ChaosInitiative/CAS',
     packages=setuptools.find_packages(),
     classifiers=[
         'Programming Language :: Python :: 3',

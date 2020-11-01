@@ -1,7 +1,7 @@
-import assetbuilder.utilities as utilities
-from assetbuilder.models import BuildEnvironment
-from assetbuilder.config import LazyDynamicDotMap
-from assetbuilder.common.buildsys.shared import BaseCompiler
+import cas.common.utilities as utilities
+from cas.common.models import BuildEnvironment
+from cas.common.config import LazyDynamicDotMap
+from cas.common.buildsys.shared import BaseCompiler
 
 import os
 import shutil

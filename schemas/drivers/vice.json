@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
-    "$id": "https://chaosinitiative.com/assetbuilder/schema/drivers/vice.json",
+    "$id": "https://chaosinitiative.com/cas/schemas/drivers/vice.json",
 
     "type": "object",
     "title": "ICE Encrypted File",

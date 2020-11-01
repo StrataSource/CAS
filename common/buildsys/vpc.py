@@ -1,5 +1,5 @@
-from assetbuilder.models import BuildEnvironment
-from assetbuilder.config import LazyDynamicDotMap
+from cas.common.models import BuildEnvironment
+from cas.common.config import LazyDynamicDotMap
 
 import os
 import sys

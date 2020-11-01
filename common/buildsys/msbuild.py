@@ -1,5 +1,5 @@
-from assetbuilder.models import BuildEnvironment
-from assetbuilder.common.buildsys.shared import BaseCompiler
+from cas.common.models import BuildEnvironment
+from cas.common.buildsys.shared import BaseCompiler
 
 import os
 import sys

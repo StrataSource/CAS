@@ -1,7 +1,7 @@
-from assetbuilder.models import BuildResult, BuildSubsystem, BuildEnvironment
-from assetbuilder.common.buildsys.msbuild import MSBuildCompiler
-from assetbuilder.common.buildsys.posix import PosixCompiler
-from assetbuilder.common.buildsys.vpc import VPCInstance
+from cas.common.models import BuildResult, BuildSubsystem, BuildEnvironment
+from cas.common.buildsys.msbuild import MSBuildCompiler
+from cas.common.buildsys.posix import PosixCompiler
+from cas.common.buildsys.vpc import VPCInstance
 
 import os
 import sys

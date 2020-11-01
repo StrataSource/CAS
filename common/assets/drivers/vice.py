@@ -1,6 +1,6 @@
-from assetbuilder.models import (
-    BuildEnvironment, Asset, AssetBuildContext, BatchedDriver, PrecompileResult
-)
+from cas.common.models import BuildEnvironment
+from cas.common.assets.models import Asset, AssetBuildContext, SerialDriver, PrecompileResult
+
 from typing import List
 from pathlib import Path
 import subprocess

@@ -1,10 +1,12 @@
 import sys
 import os
+
 # HACK how the fuck do you really do this
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
-import assetbuilder.builder
-import assetbuilder.utilities as utilities
+import cas.common.utilities as utilities
+from cas.common.sequencer import Sequencer
+
 import ast
 import json
 import argparse
@@ -13,7 +15,6 @@ import multiprocessing
 from pathlib import Path
 
 from dotmap import DotMap
-
 
 def _resolve_root_path() -> Path:
     root = Path.cwd()
@@ -45,7 +46,6 @@ if __name__ == '__main__':
 
     parser.add_argument('-o', '--override', action='append', help='Overrides the configuration path specified by x.')
 
-    parser.add_argument('--skip-assets', action='store_true', help='Skips building assets.')
     parser.add_argument('--include-subsystems', type=str.lower, help='Comma-seperated list of subsystems to include in the build.')
     parser.add_argument('--exclude-subsystems', type=str.lower, help='Comma-seperated list of subsystems to exclude from the build.')
 
@@ -97,6 +97,6 @@ if __name__ == '__main__':
     config['args'] = {**config.get('args', {}), **vars(args)}
     config['args']['cli'] = True
 
-    builder = assetbuilder.builder.Builder(root_path, config)
-    if not builder.build():
+    sequencer = Sequencer(root_path, config)
+    if not sequencer.run():
         exit(1)
