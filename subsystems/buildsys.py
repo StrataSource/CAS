@@ -11,38 +11,54 @@ from pathlib import Path
 class BuildsysSubsystem(BuildSubsystem):
     def __init__(self, env: BuildEnvironment, config: dict):
         super().__init__(env, config)
+
+        # if a platform isn't specified,
+        # default to the 64-bit version of our current platform
+        self._platform = config.get('platform')
+        if not self._platform:
+            if sys.platform == 'win32':
+                self._platform = 'win64'
+            elif sys.platform == 'darwin':
+                self._platform = 'osx64'
+            elif sys.platform == 'linux':
+                self._platform = 'linux64'
+            else:
+                raise NotImplementedError()
+
+        self._solution = f"{config.solution}_{config.group}_{self._platform}"
+
         if sys.platform == "win32":
-            self._compiler = MSBuildCompiler(self.env, self.config.windows)
+            self._compiler = MSBuildCompiler(self.env, self.config.windows, self._platform)
         else:
-            self._compiler = PosixCompiler(self.env, self.config.posix)
+            self._compiler = PosixCompiler(self.env, self.config.posix, self._platform)
 
     def build(self) -> BuildResult:
         # force clean for staging/release
-        if self.env.build_type != "trunk" and not self._compiler.clean():
+        if self.env.build_type != "trunk" and not self._compiler.clean(self._solution):
             self._logger.error("Mandatory clean for staging/release builds failed!")
             return BuildResult(False)
 
         # configure stage (run VPC, build makefiles)
         if self.config.configure:
-            vpc = VPCInstance(self.env, self.config.vpc, self.config.solution)
-            if not vpc.run() or not self._compiler.configure():
+            vpc = VPCInstance(self.env, self.config, self._platform)
+            if not vpc.run() or not self._compiler.configure(self._solution):
                 return BuildResult(False)
 
         # compile stage (compile dependencies and engine)
         if self.config.compile:
-            if not self._compiler.build():
+            if not self._compiler.build(self._solution):
                 return BuildResult(False)
 
         return BuildResult(True)
 
     def clean(self) -> bool:
         # clean output files before we delete project files!
-        if not self._compiler.clean():
+        if not self._compiler.clean(self._solution):
             self._logger.error("Output binary clean failed!")
             return False
 
-        sln_ext = f"{self.env.platform}.sln"
-        proj_ext = f"{self.env.platform}.vcxproj"
+        sln_ext = f"{self._platform}.sln"
+        proj_ext = f"{self._platform}.vcxproj"
         for root, _, files in os.walk(self.env.src):
             for f in files:
                 if (

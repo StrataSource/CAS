@@ -49,18 +49,19 @@ class VPCArguments:
 
 
 class VPCInstance:
-    def __init__(self, env: BuildEnvironment, config: LazyDynamicDotMap, solution: str):
+    def __init__(self, env: BuildEnvironment, config: LazyDynamicDotMap, platform: str):
         self._env = env
-        self._config = config
-        self._solution = solution
-        self._group = self._config.group
+        self._config = config.vpc
+        self._solution = config.solution
+        self._group = config.group
+        self._platform = platform
 
     def _process_vpc_args(self) -> VPCArguments:
         args = list(self._config.args)
         defines = list(self._config.defines)
 
         args.append(self._solution)
-        args.append(self._env.platform)
+        args.append(self._platform)
         args.append(self._config.windows.toolchain)
 
         if self._config.ide_files:
@@ -69,7 +70,7 @@ class VPCInstance:
 
         raw = []
         raw.append("/mksln")
-        raw.append(f"{self._group}_{self._env.platform}")
+        raw.append(f"{self._solution}_{self._group}_{self._platform}")
 
         build_type = self._env.build_type
         defines.append(BUILD_TYPE_MAP[build_type])

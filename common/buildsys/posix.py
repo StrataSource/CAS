@@ -191,8 +191,8 @@ class PosixCompiler(BaseCompiler):
     Generic POSIX compiler, used to build via generated makefiles
     """
 
-    def __init__(self, env: BuildEnvironment, config: dict):
-        super().__init__(env, config)
+    def __init__(self, env: BuildEnvironment, config: dict, platform: str):
+        super().__init__(env, config, platform)
         self._compile_env = _compile_environments[self._config.environment.type](
             env, self._config
         )
@@ -210,10 +210,10 @@ class PosixCompiler(BaseCompiler):
     def _build_makefile(self) -> bool:
         return True
 
-    def clean(self) -> bool:
+    def clean(self, solution: str) -> bool:
         return None
 
-    def configure(self) -> bool:
+    def configure(self, solution: str) -> bool:
         if not super().configure():
             return False
 
@@ -227,5 +227,5 @@ class PosixCompiler(BaseCompiler):
 
         return True
 
-    def build(self) -> bool:
+    def build(self, solution: str) -> bool:
         return None

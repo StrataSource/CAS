@@ -14,11 +14,23 @@
             "description": "The name of the solution to build.",
             "examples": ["p2ce"]
         },
+        "group": {
+            "type": "string",
+            "title": "Group",
+            "description": "The name of the group (collection of VPC projects) to build.",
+            "default": "everything"
+        },
         "project": {
             "type": "string",
             "title": "Project",
             "description": "The name of the project to build. Leaving this not set will build all projects in the solution.",
             "examples": ["materialsystem"]
+        },
+        "platform": {
+            "type": "string",
+            "title": "Platform",
+            "description": "The platform to target. If not set, defaults to the current system platform.",
+            "enum": ["win32", "win64", "osx32", "osx64", "linux32", "linux64"]
         },
         "configure": {
             "type": "boolean",
@@ -121,12 +133,6 @@
             "description": "Options for VPC (Valve Project Creator)",
 
             "properties": {
-                "group": {
-                    "type": "string",
-                    "title": "Group",
-                    "description": "The name of the VPC group (collection of VPC projects) to build.",
-                    "default": "everything"
-                },
                 "ide_files": {
                     "type": "boolean",
                     "title": "IDE Files",

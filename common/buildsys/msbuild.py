@@ -19,9 +19,9 @@ class MSBuildCompiler(BaseCompiler):
     MSBuild compiler, used on Windows
     """
 
-    def __init__(self, env: BuildEnvironment, config: dict):
+    def __init__(self, env: BuildEnvironment, config: dict, platform: str):
+        super().__init__(env, config, platform)
         self._setup_winsdk()
-        super().__init__(env, config)
 
     def _setup_winsdk(self):
         sdk_key = winreg.OpenKey(
@@ -37,9 +37,9 @@ class MSBuildCompiler(BaseCompiler):
         self._winsdk_path = os.path.join(sdk_path[0], f"bin\\{sdk_ver[0]}.0\\x64")
 
     def _invoke_msbuild(
-        self, project: str, targets: List[str], parameters: Dict[str, str]
+        self, solution: str, targets: List[str], parameters: Dict[str, str]
     ) -> bool:
-        args = [MSBUILD_PATH, f"{project}.sln"]
+        args = [MSBUILD_PATH, f"{solution}.sln"]
         args.append("-target:" + ";".join(targets))
         for k, v in parameters.items():
             args.append(f"/p:{k}={v}")
@@ -58,16 +58,16 @@ class MSBuildCompiler(BaseCompiler):
             params["DebugType"] = "None"
         return params
 
-    def _build_internal(self, target: str) -> bool:
+    def _build_internal(self, solution: str, target: str) -> bool:
         params = self._build_default_parameters()
-        return self._invoke_msbuild(self._get_project_name(), [target], params)
+        return self._invoke_msbuild(solution, [target], params)
 
-    def clean(self) -> bool:
-        return self._build_internal("Clean")
+    def clean(self, solution: str) -> bool:
+        return self._build_internal(solution, "Clean")
 
-    def configure(self) -> bool:
+    def configure(self, solution: str) -> bool:
         # msbuild doesn't need to do anything
         return True
 
-    def build(self) -> bool:
-        return self._build_internal("Build")
+    def build(self, solution: str) -> bool:
+        return self._build_internal(solution, "Build")
