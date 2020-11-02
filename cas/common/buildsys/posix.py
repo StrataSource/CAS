@@ -250,7 +250,7 @@ class PosixCompiler(BaseCompiler):
         envvars = {
             "CFG": self._build_type,
             "ASAN": sanitizers.address,
-            "UBSAN": sanitizers.undefined,
+            "UBSAN": sanitizers.behavior,
             "TSAN": sanitizers.threading,
             "NO_STRIP": False,
             "NO_DBG_INFO": False,

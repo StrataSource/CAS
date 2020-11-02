@@ -87,6 +87,7 @@
                     "type": "object",
                     "title": "Sanitizers",
                     "description": "Sanitizers to enable/disable",
+                    "default": {},
                     "properties": {
                         "address": {
                             "type": "boolean",
