@@ -1,6 +1,7 @@
 import cas.common.utilities as utilities
 from cas.common.steamtools import SteamInstance
 from cas.common.config import ConfigurationUtilities
+from cas.common.cache import CacheManager
 
 from pathlib import Path
 import os
@@ -16,6 +17,9 @@ class BuildEnvironment:
 
     def __init__(self, path: str, config: dict):
         self.config = ConfigurationUtilities.parse_root_config(path, config)
+
+        self.cache = CacheManager(path)
+        self.cache.load()
 
         self.build_type = self.config.args.build_type
         self.build_categories = None
@@ -137,7 +141,7 @@ class BuildSubsystem:
     def __init__(self, env: BuildEnvironment, config: dict):
         self.env = env
         self.config = config
-        
+
         mod = self.__class__.__module__
         self._logger = logging.getLogger(mod)
 

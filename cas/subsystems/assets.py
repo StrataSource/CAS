@@ -1,7 +1,7 @@
 import cas
 from cas.common.config import DefaultValidatingDraft7Validator
 from cas.common.models import BuildEnvironment, BuildResult, BuildSubsystem
-from cas.common.assets.cache import AssetCache
+from cas.common.cache import FileCache
 from cas.common.assets.models import (
     Asset,
     AssetBuildContext,
@@ -64,11 +64,10 @@ class AssetSubsystem(BuildSubsystem):
         self._drivers = {}
         self._validators = {}
 
-        self._cache = AssetCache(self.env.root)
-        self._cache.load()
-
         self._args = self.env.config.args
         self._dry_run = self._args.dry_run
+
+        self._cache = FileCache(self.env.cache, "assets")
 
     def _get_asset_driver(self, name: str, config: dict) -> BaseDriver:
         driver = self._drivers.get(name)
