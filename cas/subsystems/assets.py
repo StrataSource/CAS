@@ -153,6 +153,7 @@ class AssetSubsystem(BuildSubsystem):
                 # check hashes
                 invalidated = False
                 for f in result.inputs:
+                    f = f.resolve()
                     if not os.path.exists(f):
                         self._logger.error(
                             f"Required dependency '{f}' could not be located!"
@@ -162,6 +163,7 @@ class AssetSubsystem(BuildSubsystem):
                         invalidated = True
 
                 for f in result.outputs:
+                    f = f.resolve()
                     if not self._cache.validate(f):
                         invalidated = True
 

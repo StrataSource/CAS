@@ -3,7 +3,6 @@ from cas.common.buildsys.shared import BaseCompiler
 
 import os
 import sys
-import logging
 from typing import List, Dict
 
 winreg = None
@@ -20,7 +19,8 @@ class MSBuildCompiler(BaseCompiler):
     """
 
     def __init__(self, env: BuildEnvironment, config: dict, platform: str):
-        super().__init__(env, config, platform)
+        super().__init__(env, config.windows, platform)
+        self._build_type = config.type
         self._setup_winsdk()
 
     def _setup_winsdk(self):
@@ -44,13 +44,13 @@ class MSBuildCompiler(BaseCompiler):
         for k, v in parameters.items():
             args.append(f"/p:{k}={v}")
 
-        logging.debug(f"Running MSBuild with parameters: {args}")
+        self._logger.debug(f"Running MSBuild with parameters: {args}")
         returncode = self._env.run_tool(args, cwd=self._env.src)
         return returncode == 0
 
     def _build_default_parameters(self) -> Dict[str, str]:
         params = {}
-        if self._env.build_type == "trunk":
+        if self._config.type == "debug":
             params["Configuration"] = "Debug"
         else:
             params["Configuration"] = "Release"

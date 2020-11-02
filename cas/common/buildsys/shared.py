@@ -1,6 +1,8 @@
 from cas.common.models import BuildEnvironment
 from typing import Mapping
 
+import logging
+
 
 class BaseCompiler:
     """
@@ -11,6 +13,7 @@ class BaseCompiler:
         self._env = env
         self._config = config
         self._platform = platform
+        self._logger = logging.getLogger(self.__class__.__module__)
 
     def clean(self, solution: str):
         """

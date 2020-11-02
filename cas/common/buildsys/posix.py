@@ -34,9 +34,10 @@ class BaseCompileEnvironment:
         self._env = env
         self._config = config
         self._env_config = config.environment.config
-        self._env_vars = self._build_envvars()
+        self._env_vars = self._build_static_env()
+        self._logger = logging.getLogger(self.__class__.__module__)
 
-    def _build_envvars(self) -> dict:
+    def _build_static_env(self) -> dict:
         return {
             "CC": self._config.cc,
             "CXX": self._config.cxx,
@@ -44,7 +45,16 @@ class BaseCompileEnvironment:
             "PLATFORM": self._config.platform,
         }
 
-    def run(self, srcdir: str, args: List[str]) -> int:
+    def _build_env(self, env: Mapping[str, str]) -> Mapping[str, str]:
+        nenv = os.environ.copy()
+        nenv.update(self._env_vars)
+        nenv.update(env)
+
+        return nenv
+
+    def run(
+        self, args: List[str], env: Mapping[str, str] = {}, path_suffix: str = None
+    ) -> int:
         return NotImplementedError()
 
 
@@ -53,11 +63,11 @@ class NativeCompileEnvironment(BaseCompileEnvironment):
     Compilation environment that executes commands in a native shell
     """
 
-    def run(self, srcdir: str, args: List[str]) -> int:
-        cwd = self._env.config.path.src.joinpath(srcdir)
-        return self._env.run_tool(
-            args, env=os.environ.copy().update(self._env_vars), cwd=cwd
-        ).returncode
+    def run(
+        self, args: List[str], env: Mapping[str, str] = {}, path_suffix: str = None
+    ) -> int:
+        cwd = self._env.config.path.src.joinpath(path_suffix)
+        return self._env.run_tool(args, env=self._build_env(env), cwd=cwd).returncode
 
 
 class ChrootCompileEnvironment(BaseCompileEnvironment):
@@ -65,11 +75,14 @@ class ChrootCompileEnvironment(BaseCompileEnvironment):
     Compilation environment that executes commands using schroot
     """
 
-    def run(self, srcdir: str, args: List[str]) -> int:
-        cwd = self._env.config.path.src.joinpath(srcdir)
+    def run(
+        self, args: List[str], env: Mapping[str, str] = {}, path_suffix: str = None
+    ) -> int:
+        cwd = self._env.config.path.src.joinpath(path_suffix)
         defargs = ["schroot", "-c", self._env_config.name, "--", "bash", "-c"]
+
         return self._env.run_subprocess(
-            defargs.extend(args), env=os.environ.copy().update(self._env_vars), cwd=cwd
+            defargs.extend(args), env=self._build_env(env), cwd=cwd
         ).returncode
 
 
@@ -96,7 +109,7 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
         if sysroot_file.exists():
             sysroot_hash = utilities.hash_file_sha256(sysroot_file)
             if not sysroot_hash == STEAMRT_IMAGE_SHA256:
-                logging.warning(
+                self._logger.warning(
                     "SteamRT docker image hash does not match, redownloading!"
                 )
                 sysroot_file.unlink()
@@ -119,9 +132,9 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
             # verify the hash
             sysroot_hash = utilities.hash_file_sha256(sysroot_file)
             if not sysroot_hash == STEAMRT_IMAGE_SHA256:
-                logging.error("Failed to verify the SteamRT docker image hash")
-                logging.error(f"Wanted {STEAMRT_IMAGE_SHA256}")
-                logging.error(f"Got {sysroot_hash}")
+                self._logger.error("Failed to verify the SteamRT docker image hash")
+                self._logger.error(f"Wanted {STEAMRT_IMAGE_SHA256}")
+                self._logger.error(f"Got {sysroot_hash}")
                 sysroot_file.unlink()
                 return False
 
@@ -137,14 +150,22 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
                 ["docker", "build", "--tag", DOCKER_IMAGE_TAG, "."], cwd=cache_folder
             )
             if not ret.returncode == 0:
-                logging.error("Failed to build the SteamRT docker image")
+                self._logger.error("Failed to build the SteamRT docker image")
                 return False
 
         return True
 
-    def run(self, srcdir: str, args: List[str]) -> int:
+    def run(
+        self, args: List[str], env: Mapping[str, str] = {}, path_suffix: str = None
+    ) -> int:
         if not self._ensure_installed():
             return 1
+
+        root_path = self._env.config.path.root
+
+        cwd = str(root_path.joinpath("src"))
+        if path_suffix:
+            cwd += f"/{path_suffix}"
 
         defargs = [
             "docker",
@@ -152,16 +173,20 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
             "--rm",
             "-i",
             "-v",
-            f"{str(self._env.config.path.root)}:/app",
+            f"{root_path}:{root_path}",
             "-w",
-            f"/app/src/{srcdir}",
+            cwd,
         ]
-        for k, v in self._env_vars.items():
+
+        nenv = self._env_vars.copy()
+        nenv.update(env)
+
+        for k, v in nenv.items():
             defargs.append("-e")
             defargs.append(f"{k}={v}")
         defargs.append(DOCKER_IMAGE_TAG)
         defargs.extend(args)
-        logging.debug(defargs)
+        self._logger.debug(defargs)
 
         return self._env.run_subprocess(defargs).returncode
 
@@ -175,8 +200,10 @@ class BaseDependency:
         self._name = name
         self._config = config
 
-    def build(self, env: BaseCompileEnvironment) -> bool:
-        return env.run(self._config.src, self._config.run) == 0
+    def build(
+        self, env: BaseCompileEnvironment, envvars: Mapping[str, str] = {}
+    ) -> bool:
+        return env.run(self._config.run, envvars, self._config.src) == 0
 
 
 _compile_environments = {
@@ -192,7 +219,8 @@ class PosixCompiler(BaseCompiler):
     """
 
     def __init__(self, env: BuildEnvironment, config: dict, platform: str):
-        super().__init__(env, config, platform)
+        super().__init__(env, config.posix, platform)
+        self._build_type = config.type
         self._compile_env = _compile_environments[self._config.environment.type](
             env, self._config
         )
@@ -200,32 +228,59 @@ class PosixCompiler(BaseCompiler):
             BaseDependency(k, v) for k, v in self._config.dependencies.items()
         }
 
-    def _build_dependencies(self) -> bool:
+    def _build_dependencies(self, clean: bool = False) -> bool:
+        bstr = "cleaning" if clean else "building"
+        envvars = {}
+
+        if clean:
+            envvars["CLEAN"] = "1"
+
         for dependency in self._dependencies:
-            logging.info(f"building dependency {dependency._name}")
-            if not dependency.build(self._compile_env):
+            self._logger.info(f"{bstr} dependency {dependency._name}")
+            if not dependency.build(self._compile_env, envvars):
                 return False
         return True
 
-    def _build_makefile(self) -> bool:
+    def _run_makefile(self, makefile: str, clean: bool = False) -> bool:
+        jobs = self._config.get("jobs", multiprocessing.cpu_count())
+        sanitizers = self._config.sanitizers
+
+        args = ["make", "-f", makefile, f"-j{jobs}"]
+
+        envvars = {
+            "CFG": self._build_type,
+            "ASAN": sanitizers.address,
+            "UBSAN": sanitizers.undefined,
+            "TSAN": sanitizers.threading,
+            "NO_STRIP": False,
+            "NO_DBG_INFO": False,
+            "VALVE_NO_AUTO_P4": True,
+        }
+
+        self._compile_env.run(args, utilities.map_to_envvars(envvars))
         return True
 
     def clean(self, solution: str) -> bool:
-        return None
+        if not self._build_dependencies(True):
+            self._logger.error("dependency clean failed; run with --verbose to see why")
+
+        if not self._run_makefile(solution, True):
+            self._logger.error("clean failed")
+
+        return True
 
     def configure(self, solution: str) -> bool:
         if not super().configure(solution):
             return False
 
         if not self._build_dependencies():
-            logging.error("dependency build failed; run with --verbose to see why.")
-            return False
-
-        if not self._build_makefile():
-            logging.error("makefile build failed")
+            self._logger.error("dependency build failed; run with --verbose to see why")
             return False
 
         return True
 
     def build(self, solution: str) -> bool:
-        return None
+        if not self._run_makefile(f"{solution}.mak"):
+            self._logger.error("build failed")
+            return False
+        return True

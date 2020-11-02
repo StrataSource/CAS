@@ -32,6 +32,13 @@
             "description": "The platform to target. If not set, defaults to the current system platform.",
             "enum": ["win32", "win64", "osx32", "osx64", "linux32", "linux64"]
         },
+        "type": {
+            "type": "string",
+            "title": "Build Type",
+            "description": "The type of the build, either debug or release.",
+            "enum": ["debug", "release"],
+            "default": "debug"
+        },
         "configure": {
             "type": "boolean",
             "title": "Enable Configuration Pass",

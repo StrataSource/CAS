@@ -14,23 +14,23 @@ class BuildsysSubsystem(BuildSubsystem):
 
         # if a platform isn't specified,
         # default to the 64-bit version of our current platform
-        self._platform = config.get('platform')
+        self._platform = config.get("platform")
         if not self._platform:
-            if sys.platform == 'win32':
-                self._platform = 'win64'
-            elif sys.platform == 'darwin':
-                self._platform = 'osx64'
-            elif sys.platform == 'linux':
-                self._platform = 'linux64'
+            if sys.platform == "win32":
+                self._platform = "win64"
+            elif sys.platform == "darwin":
+                self._platform = "osx64"
+            elif sys.platform == "linux":
+                self._platform = "linux64"
             else:
                 raise NotImplementedError()
 
         self._solution = f"{config.solution}_{config.group}_{self._platform}"
 
         if sys.platform == "win32":
-            self._compiler = MSBuildCompiler(self.env, self.config.windows, self._platform)
+            self._compiler = MSBuildCompiler(self.env, self.config, self._platform)
         else:
-            self._compiler = PosixCompiler(self.env, self.config.posix, self._platform)
+            self._compiler = PosixCompiler(self.env, self.config, self._platform)
 
     def build(self) -> BuildResult:
         # force clean for staging/release

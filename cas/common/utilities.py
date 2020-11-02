@@ -7,7 +7,7 @@ import logging
 import tqdm
 
 from pathlib import Path
-from typing import List
+from typing import List, Mapping
 
 
 class TqdmLoggingHandler(logging.Handler):
@@ -137,3 +137,13 @@ def set_dot_notation(target: dict, key: str, value):
         last = last[key]
         pre_k = key
     pre[pre_k] = value
+
+
+def map_to_envvars(envvars: Mapping) -> Mapping[str, str]:
+    result = {}
+    for k, v in envvars.items():
+        if isinstance(v, bool):
+            result[k] = "1" if v else "0"
+        else:
+            result[k] = str(v)
+    return result
