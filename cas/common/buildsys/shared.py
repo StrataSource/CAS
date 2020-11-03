@@ -15,19 +15,19 @@ class BaseCompiler:
         self._platform = platform
         self._logger = logging.getLogger(self.__class__.__module__)
 
-    def clean(self, solution: str):
+    def clean(self):
         """
         Removes all output files of the project.
         """
         raise NotImplementedError()
 
-    def configure(self, solution: str):
+    def configure(self):
         """
         Generates the necessary files to build the project.
         """
         return NotImplementedError()
 
-    def build(self, solution: str):
+    def build(self):
         """
         Compiles the project.
         """

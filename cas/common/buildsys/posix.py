@@ -220,6 +220,9 @@ class PosixCompiler(BaseCompiler):
 
     def __init__(self, env: BuildEnvironment, config: dict, platform: str):
         super().__init__(env, config.posix, platform)
+        self._makefile = f"{config.solution}_{config.group}_{platform}.mak"
+        self._project = config.get("project")
+
         self._build_type = config.type
         self._compile_env = _compile_environments[self._config.environment.type](
             env, self._config
@@ -230,10 +233,7 @@ class PosixCompiler(BaseCompiler):
 
     def _build_dependencies(self, clean: bool = False) -> bool:
         bstr = "cleaning" if clean else "building"
-        envvars = {}
-
-        if clean:
-            envvars["CLEAN"] = "1"
+        envvars = utilities.map_to_envvars({"CLEAN": clean})
 
         for dependency in self._dependencies:
             self._logger.info(f"{bstr} dependency {dependency._name}")
@@ -241,11 +241,18 @@ class PosixCompiler(BaseCompiler):
                 return False
         return True
 
-    def _run_makefile(self, makefile: str, clean: bool = False) -> bool:
+    def _run_makefile(self, clean: bool = False) -> bool:
         jobs = self._config.get("jobs", multiprocessing.cpu_count())
         sanitizers = self._config.sanitizers
 
-        args = ["make", "-f", makefile, f"-j{jobs}"]
+        args = [
+            "make",
+            "-f",
+            self._makefile,
+            f"-j{jobs}",
+        ]
+        if self._project is not None:
+            args.append(self._project)
 
         envvars = {
             "CFG": self._build_type,
@@ -257,20 +264,19 @@ class PosixCompiler(BaseCompiler):
             "VALVE_NO_AUTO_P4": True,
         }
 
-        self._compile_env.run(args, utilities.map_to_envvars(envvars))
-        return True
+        return self._compile_env.run(args, utilities.map_to_envvars(envvars)) == 0
 
-    def clean(self, solution: str) -> bool:
+    def clean(self) -> bool:
         if not self._build_dependencies(True):
             self._logger.error("dependency clean failed; run with --verbose to see why")
 
-        if not self._run_makefile(solution, True):
+        if not self._run_makefile(True):
             self._logger.error("clean failed")
 
         return True
 
-    def configure(self, solution: str) -> bool:
-        if not super().configure(solution):
+    def configure(self) -> bool:
+        if not super().configure():
             return False
 
         if not self._build_dependencies():
@@ -279,8 +285,8 @@ class PosixCompiler(BaseCompiler):
 
         return True
 
-    def build(self, solution: str) -> bool:
-        if not self._run_makefile(f"{solution}.mak"):
+    def build(self) -> bool:
+        if not self._run_makefile():
             self._logger.error("build failed")
             return False
         return True

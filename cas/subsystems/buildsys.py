@@ -25,8 +25,6 @@ class BuildsysSubsystem(BuildSubsystem):
             else:
                 raise NotImplementedError()
 
-        self._solution = f"{config.solution}_{config.group}_{self._platform}"
-
         if sys.platform == "win32":
             self._compiler = MSBuildCompiler(self.env, self.config, self._platform)
         else:
@@ -34,26 +32,26 @@ class BuildsysSubsystem(BuildSubsystem):
 
     def build(self) -> BuildResult:
         # force clean for staging/release
-        if self.env.build_type != "trunk" and not self._compiler.clean(self._solution):
+        if self.env.build_type != "trunk" and not self._compiler.clean():
             self._logger.error("Mandatory clean for staging/release builds failed!")
             return BuildResult(False)
 
         # configure stage (run VPC, build makefiles)
         if self.config.configure:
             vpc = VPCInstance(self.env, self.config, self._platform)
-            if not vpc.run() or not self._compiler.configure(self._solution):
+            if not vpc.run() or not self._compiler.configure():
                 return BuildResult(False)
 
         # compile stage (compile dependencies and engine)
         if self.config.compile:
-            if not self._compiler.build(self._solution):
+            if not self._compiler.build():
                 return BuildResult(False)
 
         return BuildResult(True)
 
     def clean(self) -> bool:
         # clean output files before we delete project files!
-        if not self._compiler.clean(self._solution):
+        if not self._compiler.clean():
             self._logger.error("Output binary clean failed!")
             return False
 
