@@ -136,13 +136,12 @@ def main():
         if "=" in x:
             spl = x.split("=", 1)
             val = spl[1]
-            literal = val.lower()
 
-            # evaluate boolean expressions
-            if literal == "true":
-                val = True
-            elif literal == "false":
-                val = False
+            # if it starts with [ or {, parse as json
+            if val.startswith("[") or val.startswith("{"):
+                val = json.loads(val)
+            elif val.isdigit():
+                val = int(val)
 
             utilities.set_dot_notation(config, spl[0], val)
         else:
