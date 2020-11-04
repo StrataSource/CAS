@@ -92,6 +92,11 @@ class VPCInstance:
 
         return VPCArguments(args, raw, [self._group], defines)
 
+    def _clear_crc_files(self):
+        crc_files = self._env.src.rglob("*.vpc_crc")
+        for f in crc_files:
+            f.unlink()
+
     def run(self) -> bool:
         # hash the VPC files and see if we need to rebuild
         rebuild = False
@@ -102,6 +107,7 @@ class VPCInstance:
                 rebuild = True
         if rebuild:
             self._cache.save()
+            self._clear_crc_files()
 
         if not rebuild:
             self._logger.info("scripts are unchanged, not running VPC")
