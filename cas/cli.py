@@ -16,7 +16,7 @@ def _resolve_root_path() -> Path:
         dirs = os.listdir(root)
         if "content" in dirs and "game" in dirs:
             # we may have a match, verify we have a valid path
-            if Path(os.path.join(root, "content", "assets.json")).exists():
+            if Path(os.path.join(root, "content", "config.json")).exists():
                 return Path(root).resolve()
         if not root.parent or root.parent == root:
             break
@@ -114,17 +114,17 @@ def main():
 
     content_path = root_path.joinpath("content")
 
-    config_file = content_path.joinpath("assets.json")
+    config_file = content_path.joinpath("cas.json")
     if not config_file.exists():
         logger.error(
-            "Couldn't find assets.json. If you don't yet have one, please see the documentation for a template."
+            "Couldn't find cas.json. If you don't yet have one, please see the documentation for a template."
         )
         exit(1)
 
     with config_file.open("rb") as f:
         config = DotMap(json.load(f))
 
-    cache_path = content_path.joinpath(".assets_c.json")
+    cache_path = content_path.joinpath(".cas_cache.json")
     if args.force and cache_path.exists():
         cache_path.unlink()
 

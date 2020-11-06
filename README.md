@@ -5,7 +5,7 @@ Chaos Automation System (CAS) is a toolkit for automating complex sequences of t
 ## Usage
 CAS, by default, expects a certain folder structure to be present. You should have a root folder for your project, containing a `content` folder and a `game` folder. The former contains your source content, while your latter contains your compiled assets and binaries.
 
-To configure which assets to build, an `assets.json` file must be present in your `content` folder. An example of this is present in the `examples` folder of this repository, which you can copy if you want to provide a template for your project.
+To configure which assets to build, an `cas.json` file must be present in your `content` folder. An example of this is present in the `examples` folder of this repository, which you can copy if you want to provide a template for your project.
 
 You must run CAS from inside your project's root tree; if you need to run it from somewhere else, use the `--path` argument.
 
