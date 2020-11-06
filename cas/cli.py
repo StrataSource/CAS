@@ -16,7 +16,7 @@ def _resolve_root_path() -> Path:
         dirs = os.listdir(root)
         if "content" in dirs and "game" in dirs:
             # we may have a match, verify we have a valid path
-            if Path(os.path.join(root, "content", "config.json")).exists():
+            if Path(os.path.join(root, "content", "cas.json")).exists():
                 return Path(root).resolve()
         if not root.parent or root.parent == root:
             break
