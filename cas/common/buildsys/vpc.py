@@ -3,7 +3,7 @@ from cas.common.models import BuildEnvironment
 from cas.common.config import LazyDynamicDotMap
 from cas.common.cache import FileCache
 
-import json
+import sys
 from typing import List
 
 BUILD_TYPE_MAP = {
@@ -93,6 +93,9 @@ class VPCInstance:
         return VPCArguments(args, raw, [self._group], defines)
 
     def _clear_crc_files(self):
+        # Don't do this on Windows, it's an unnecessary slowdown
+        if sys.platform == "win32":
+            return
         crc_files = self._env.src.rglob("*.vpc_crc")
         for f in crc_files:
             f.unlink()
