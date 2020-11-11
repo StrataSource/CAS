@@ -30,12 +30,23 @@ DefaultValidatingDraft7Validator = extend_validator_with_default(
 )
 
 
-class DataResolverScope:
+class DataResolverScope(Mapping):
     def __init__(self):
-        self.results = DotMap()
+        self._data = DotMap()
+
+    def __getitem__(self, key):
+        if key not in self._data:
+            raise KeyError(key)
+        return self._data[key]
+
+    def __len__(self):
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
 
     def get_subsystem_output(self, subsystem: str, output: str):
-        return self.results.subsystems[subsystem].outputs[output]
+        return self._data.subsystems[subsystem].outputs[output]
 
     def exclude_subsystem_input_files(self, subsystem: str, root: Path):
         files = self.get_subsystem_output(subsystem, "files")
@@ -71,11 +82,11 @@ class DataResolver:
         current = eval_locals
         for k in keys:
             if k not in current:
-                return None
+                raise KeyError(k)
             current = current[k]
-            if not isinstance(current, Mapping):
-                return current
-        return None
+            if k != keys[-1] and not isinstance(current, Mapping):
+                raise KeyError(k)
+        return current
 
     def _inject_config_str(self, config: str, eval_locals: Mapping) -> str:
         """
@@ -130,7 +141,7 @@ class DataResolver:
 
         if isinstance(config, list):
             result = []
-            for k, v in enumerate(config):
+            for _, v in enumerate(config):
                 parsed = self.resolve(v, scope)
                 if not v or parsed is not None:
                     result.append(parsed)
@@ -159,10 +170,11 @@ class LazyDynamicBase:
         self._transform_map = {list: LazyDynamicSequence, dict: LazyDynamicDotMap}
 
     def _transform_object(self, data):
-        eval_locals = self._resolver.build_eval_locals(self._scope, self._parent)
+        eval_locals = self._resolver.build_eval_locals(self, self._scope)
         for k, v in self._transform_map.items():
             if isinstance(data, k):
-                return v(data, self._resolver, self._scope, self)
+                resolved = v(data, self._resolver, self._scope, self)
+                return resolved
         return self._resolver.resolve(data, eval_locals)
 
 
@@ -178,7 +190,7 @@ class LazyDynamicSequence(LazyDynamicBase, Sequence):
         scope: DataResolverScope = None,
         parent=None,
     ):
-        super().__init__(data, resolver, scope)
+        super().__init__(data, resolver, scope, parent)
 
     def __getitem__(self, key):
         return self._transform_object(self._data[key])
@@ -202,7 +214,7 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
         scope: DataResolverScope = None,
         parent=None,
     ):
-        super().__init__(data, resolver, scope)
+        super().__init__(data, resolver, scope, parent)
         self._expressions = self._data.get("@expressions", {})
         self._conditions = self._data.get("@conditions", {})
 
@@ -261,7 +273,7 @@ class LazyDynamicDotMap(LazyDynamicMapping):
         scope: DataResolverScope = None,
         parent=None,
     ):
-        super().__init__(data, resolver, scope)
+        super().__init__(data, resolver, scope, parent)
 
         dmap = DotMap()
         dmap._map = self._data

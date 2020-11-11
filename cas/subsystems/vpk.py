@@ -114,9 +114,10 @@ class VPKBuildSubsystem(BuildSubsystem):
         outputs = {"files": []}
         for f in self.config.packfiles:
             vpk = self._get_vpk(f)
-            self._logger.info(f"Packing {len(vpk.files)} files into {vpk.prefix}")
+            pakid = f"{vpk.output_path.parts[-1]}/{vpk.prefix}"
+            self._logger.info(f"Packing {len(vpk.files)} files into {pakid}")
             if not vpk.pack():
-                self._logger.error(f"Failed to pack {vpk.prefix}!")
+                self._logger.error(f"Failed to pack {pakid}!")
                 return BuildResult(False)
 
             # capture the file patterns so we can pass them to other subsystems later

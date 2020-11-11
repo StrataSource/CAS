@@ -67,7 +67,7 @@ class Sequencer:
                 return False
         else:
             result = sys.build()
-            scope.results.subsystems[name] = result
+            scope._data.subsystems[name] = result
             if not result.success:
                 return False
         return True
