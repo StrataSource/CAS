@@ -1,4 +1,5 @@
 import logging
+import itertools
 from cas.common.models import BuildEnvironment
 from cas.common.config import LazyDynamicDotMap
 from cas.common.cache import FileCache
@@ -61,9 +62,14 @@ class VPCInstance:
         self._cache = FileCache(self._env.cache, "vpc")
         self._logger = logging.getLogger(__name__)
 
+    def _list_all_vpcs(self) -> list:
+        return itertools.chain(
+            self._env.src.rglob("*.vpc"), self._env.src.rglob("*.vgc")
+        )
+
     def _requires_rebuild(self) -> bool:
         # build a list of all VPC scripts in the project
-        for f in self._env.src.rglob("*.vpc"):
+        for f in self._list_all_vpcs():
             if not self._env.cache.validate(f):
                 return True
             return
@@ -103,7 +109,7 @@ class VPCInstance:
     def run(self) -> bool:
         # hash the VPC files and see if we need to rebuild
         rebuild = False
-        vpc_files = self._env.src.rglob("*.vpc")
+        vpc_files = self._list_all_vpcs()
         for f in vpc_files:
             if not self._cache.validate(f):
                 self._cache.put(f)
