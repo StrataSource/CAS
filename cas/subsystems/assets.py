@@ -17,7 +17,7 @@ import pathlib
 import importlib
 import multiprocessing
 
-from typing import List, Sequence
+from typing import Mapping, Sequence, Callable, Any
 from pathlib import Path
 
 _schema_path = Path(cas.__file__).parent.absolute().joinpath("schemas")
@@ -31,7 +31,7 @@ def _async_mod_init():
 
 
 def _run_async_serial(
-    driver: SerialDriver, context: AssetBuildContext, asset: Asset
+    context: AssetBuildContext, driver: SerialDriver, asset: Asset
 ) -> bool:
     relpath = os.path.relpath(asset.path, driver.env.root)
 
@@ -48,7 +48,7 @@ def _run_async_serial(
 
 
 def _run_async_batched(
-    driver: BatchedDriver, context: AssetBuildContext, assets: List[Asset]
+    context: AssetBuildContext, driver: BatchedDriver, assets: Sequence[Asset]
 ) -> bool:
     context.logger = logger
     for asset in assets:
@@ -58,7 +58,7 @@ def _run_async_batched(
 
 
 class AssetSubsystem(BuildSubsystem):
-    def __init__(self, env: BuildEnvironment, config: dict):
+    def __init__(self, env: BuildEnvironment, config: Mapping[str, Any]):
         super().__init__(env, config)
 
         self._drivers = {}
@@ -69,7 +69,7 @@ class AssetSubsystem(BuildSubsystem):
 
         self._cache = FileCache(self.env.cache, "assets")
 
-    def _get_asset_driver(self, name: str, config: dict) -> BaseDriver:
+    def _get_asset_driver(self, name: str) -> BaseDriver:
         driver = self._drivers.get(name)
         if driver is not None:
             return driver
@@ -79,11 +79,11 @@ class AssetSubsystem(BuildSubsystem):
             raise Exception(f"Invalid type {name}")
         self._logger.debug(f"loaded '{name}' driver")
 
-        driver = mod._driver(self.env, config)
+        driver = mod._driver(self.env)
         self._drivers[name] = driver
         return driver
 
-    def _load_asset_context(self, config: dict) -> AssetBuildContext:
+    def _load_asset_context(self, config: Mapping[str, Any]) -> AssetBuildContext:
         # validate the schema
         if config.type not in self._validators:
             driver_path = _schema_path.joinpath("drivers", f"{config.type}.json")
@@ -102,6 +102,7 @@ class AssetSubsystem(BuildSubsystem):
         if not srcpath.exists():
             raise Exception(f'The asset source folder "{srcpath}" does not exist.')
 
+        # find everything by the patterns
         patterns = []
         if isinstance(config.files, str):
             patterns.append(config.files)
@@ -110,7 +111,6 @@ class AssetSubsystem(BuildSubsystem):
         else:
             raise NotImplementedError()
 
-        # find everything by the patterns
         files = []
         for pattern in patterns:
             for path in pathlib.Path(srcpath).absolute().rglob(pattern):
@@ -124,6 +124,57 @@ class AssetSubsystem(BuildSubsystem):
             context.assets.append(Asset(f, {}))
         return context
 
+    def _build_assets(
+        self,
+        contexts: Sequence[AssetBuildContext],
+        callback: Callable[[Callable[[Mapping[str, Any]], bool], Sequence[Any]], None],
+    ):
+        for context in contexts:
+            if len(context.assets) <= 0:
+                self._logger.warning(
+                    f"no files found for a context with type {context.config.type}"
+                )
+                continue
+
+            if isinstance(context.driver, BatchedDriver):
+                callback(_run_async_batched, (context, context.driver, context.assets))
+            elif isinstance(context.driver, SerialDriver):
+                for asset in context.assets:
+                    callback(_run_async_serial, (context, context.driver, asset))
+            else:
+                raise Exception("Unknown driver type")
+
+    def _build_assets_sync(self, contexts: Sequence[AssetBuildContext]) -> bool:
+        """
+        Builds assets synchronously.
+        """
+        jobs = []
+
+        def callback(func: Callable[[Mapping[str, Any]], bool], params: Sequence[Any]):
+            jobs.append(func(*params))
+
+        self._build_assets(contexts, callback)
+        return all(job for job in jobs)
+
+    def _build_assets_async(self, contexts: Sequence[AssetBuildContext]) -> bool:
+        """
+        Builds assets asynchronously.
+        """
+        jobs = []
+        pool = multiprocessing.Pool(self._args.threads, initializer=_async_mod_init)
+
+        def callback(func: Callable[[Mapping[str, Any]], bool], params: Sequence[Any]):
+            jobs.append(pool.apply_async(func, params))
+
+        try:
+            self._build_assets(contexts, callback)
+            pool.close()
+        except KeyboardInterrupt:
+            pool.terminate()
+        pool.join()
+
+        return all(job.get() for job in jobs)
+
     def _run_asset_build(self, clean: bool = False) -> bool:
         contexts = []
         for entry in self.config.assets:
@@ -135,13 +186,18 @@ class AssetSubsystem(BuildSubsystem):
 
         # prebuild
         for context in contexts:
-            driver = self._get_asset_driver(context.config.type, {})
-            for asset in context.assets:
-                result = driver.precompile(context, asset)
+            assets = context.assets.copy()
+
+            context.assets = []
+            context.driver = self._get_asset_driver(context.config.type)
+
+            for asset in assets:
+                result = context.driver.precompile(context, asset)
                 if not result:
                     self._logger.error("Asset dependency error!")
                     return False
 
+                # clean outputs if requested
                 if clean is True:
                     for f in result.outputs:
                         if not f.exists():
@@ -172,7 +228,7 @@ class AssetSubsystem(BuildSubsystem):
 
                 if invalidated:
                     total_build += 1
-                    context.buildable.append(asset)
+                    context.assets.append(asset)
 
         if clean is True:
             self._logger.info("assets cleaned")
@@ -187,70 +243,34 @@ class AssetSubsystem(BuildSubsystem):
             return True
 
         # build
-        # TODO: duplicated code here for singlethreaded mode, fix!
-        if self._args.threads > 1:
-            jobs = []
+        threaded = self._args.threads > 1
+        if threaded:
             self._logger.info(
                 f"running multithreaded build with {self._args.threads} threads"
             )
-            pool = multiprocessing.Pool(self._args.threads, initializer=_async_mod_init)
-
-            try:
-                for context in contexts:
-                    if len(context.buildable) <= 0:
-                        self._logger.warning(
-                            f"no files found for a context with type {context.config.type}"
-                        )
-                        continue
-
-                    driver = self._get_asset_driver(context.config.type, {})
-                    if isinstance(driver, BatchedDriver):
-                        jobs.append(
-                            pool.apply_async(
-                                _run_async_batched, (driver, context, context.buildable)
-                            )
-                        )
-                    elif isinstance(driver, SerialDriver):
-                        for asset in context.buildable:
-                            jobs.append(
-                                pool.apply_async(
-                                    _run_async_serial, (driver, context, asset)
-                                )
-                            )
-                    else:
-                        raise Exception("Unknown driver type")
-                pool.close()
-            except KeyboardInterrupt:
-                pool.terminate()
-
-            pool.join()
-
-            for job in jobs:
-                result = job.get()
-                if not result:
-                    self._logger.error("Build failed")
-                    return False
         else:
-            self._logger.info(f"running singlethreaded build")
-            for context in contexts:
-                if len(context.buildable) <= 0:
-                    self._logger.warning(
-                        f"no files found for a context with type {context.config.type}"
-                    )
-                    continue
+            self._logger.info("running singlethreaded build")
 
-                driver = self._get_asset_driver(context.config.type, {})
-                if isinstance(driver, BatchedDriver):
-                    _run_async_batched(driver, context, context.buildable)
-                elif isinstance(driver, SerialDriver):
-                    for asset in context.buildable:
-                        _run_async_serial(driver, context, asset)
-                else:
-                    raise Exception("Unknown driver type")
+        # sort out drivers that should run synchronously regardless of threading
+        sync_assets = [
+            context
+            for context in contexts
+            if not context.driver.threadable() or not threaded
+        ]
+        async_assets = [
+            context for context in contexts if context.driver.threadable() and threaded
+        ]
+
+        if not self._build_assets_sync(sync_assets):
+            self._logger.error("Build failed")
+            return False
+        if not self._build_assets_async(async_assets):
+            self._logger.error("Build failed")
+            return False
 
         self._logger.info("recalculating asset hashes...")
         for context in contexts:
-            for asset in context.buildable:
+            for asset in context.assets:
                 # save updated hashes
                 aid = asset.get_id()
                 for f in hash_inputs[aid]:

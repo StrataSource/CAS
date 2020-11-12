@@ -20,7 +20,7 @@ class Sequencer:
         self._logger = logging.getLogger(__name__)
 
     def _load_subsystem(self, name: str, module: str, config: dict) -> BuildSubsystem:
-        subsystem = self._subsystems.get(module)
+        subsystem = self._subsystems.get(name)
         if subsystem is not None:
             return
 

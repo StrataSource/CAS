@@ -18,7 +18,6 @@ class AssetBuildContext:
 
     def __init__(self, config: dict):
         self.assets = []
-        self.buildable = []
         self.config = config
 
 
@@ -44,13 +43,18 @@ class BaseDriver:
     Represents an instance of a tool that compiles assets
     """
 
-    def __init__(self, env: BuildEnvironment, config: dict):
+    def __init__(self, env: BuildEnvironment):
         self.env = env
-        self.config = config
         self.tool = str(self.env.get_tool(self._tool_name()))
 
     def _tool_name(self):
         raise NotImplementedError()
+
+    def threadable(self) -> bool:
+        """
+        Whether this driver is capable of running asynchronously or not
+        """
+        return True
 
     def precompile(self, context: AssetBuildContext, asset: Asset) -> PrecompileResult:
         """
