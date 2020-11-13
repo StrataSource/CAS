@@ -2,10 +2,10 @@
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://chaosinitiative.com/cas/schemas/subsystems/buildsys.json",
 
-    "title": "Build System Options",
-    "description": "Options for buildsys, a subsystem that compiles source code.",
-
     "type": "object",
+    "title": "Code Compiler",
+    "description": "Options for buildsys, a subsystem that compiles source code.",
+    
     "required": ["solution"],
     "properties": {
         "solution": {

@@ -2,8 +2,10 @@
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://chaosinitiative.com/cas/schemas/subsystems/syncfolder.json",
 
-    "title": "Folder Synchroniser Options",
     "type": "object",
+    "title": "Folder Synchroniser",
+    "description": "Recursively copies a folder to a destination.",
+    
     "required": ["from", "to", "files"],
     "properties": {
         "from": {

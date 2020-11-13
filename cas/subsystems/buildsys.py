@@ -31,16 +31,16 @@ class BuildsysSubsystem(BuildSubsystem):
             self._compiler = PosixCompiler(self.env, self.config, self._platform)
 
     def build(self) -> BuildResult:
-        # force clean for staging/release
-        if self.env.build_type != "trunk" and not self._compiler.clean():
-            self._logger.error("Mandatory clean for staging/release builds failed!")
-            return BuildResult(False)
-
         # configure stage (run VPC, build makefiles)
         if self.config.configure:
             vpc = VPCInstance(self.env, self.config, self._platform)
             if not vpc.run() or not self._compiler.configure():
                 return BuildResult(False)
+
+        # force clean for staging/release
+        if self.env.build_type != "trunk" and not self._compiler.clean():
+            self._logger.error("Mandatory clean for staging/release builds failed!")
+            return BuildResult(False)
 
         # compile stage (compile dependencies and engine)
         if self.config.compile:

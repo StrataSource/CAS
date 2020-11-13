@@ -123,6 +123,10 @@ class DataResolver:
         return result
 
     def eval(self, condition: str, parent: Mapping, scope: DataResolverScope) -> bool:
+        # avoid infinite recusion
+        if isinstance(parent, LazyDynamicMapping):
+            parent = parent._data
+
         eval_locals = self.build_eval_locals(parent, scope)
 
         injected = self._inject_config_str(condition, eval_locals)
@@ -226,7 +230,7 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
             return False
         condition = self._conditions.get(key)
         if isinstance(condition, str) and not self._resolver.eval(
-            condition, self._parent, self._scope
+            condition, self, self._scope
         ):
             return False
         return True
@@ -237,7 +241,7 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
         """
         expression = self._expressions.get(key)
         if isinstance(expression, str):
-            value = self._resolver.eval(expression, self._parent, self._scope)
+            value = self._resolver.eval(expression, self, self._scope)
 
         return self._transform_object(value)
 

@@ -2,8 +2,10 @@
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://chaosinitiative.com/cas/schemas/subsystems/steamworks.json",
 
-    "title": "Steamworks Publisher Options",
     "type": "object",
+    "title": "Steamworks Publisher",
+    "description": "Publishes builds to Steamworks.",
+    
     "required": ["tooldir", "scripts"],
     "properties": {
         "tooldir": {

@@ -2,7 +2,8 @@
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://chaosinitiative.com/cas/schemas/subsystems/panzip.json",
 
-    "title": "Panzip Options",
     "type": "object",
+    "title": "Panzip Options",
+    
     "properties": {}
 }

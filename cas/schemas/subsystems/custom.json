@@ -1,0 +1,22 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://chaosinitiative.com/cas/schemas/subsystems/custom.json",
+
+    "type": "object",
+    "title": "Custom Command",
+    "description": "Allows running a custom system command.",
+    "properties": {
+        "build": {
+            "type": "array",
+            "title": "Build Arguments",
+            "description": "The program and arguments to run during the build stage.",
+            "items": { "type": "string" }
+        },
+        "clean": {
+            "type": "array",
+            "title": "Clean Arguments",
+            "description": "The program and arguments to run during the clean stage.",
+            "items": { "type": "string" }
+        }
+    }
+}
