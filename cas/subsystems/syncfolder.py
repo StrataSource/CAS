@@ -24,9 +24,10 @@ class SyncFolderSubsystem(BuildSubsystem):
             to_dir.mkdir()
 
         files = utilities.rglob_multi(from_dir, self.config.files)
-        self._logger.debug(str(len(files)) + f" file(s) to copy")
+        self._logger.debug(f"{len(files)} file(s) to copy")
 
         for src in files:
+            src = src.resolve()
             dest = to_dir.joinpath(src.relative_to(from_dir))
             os.makedirs(dest.parent, exist_ok=True)
             shutil.copy(src, dest)
