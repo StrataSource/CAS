@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import hashlib
 import struct
 import logging
@@ -7,7 +8,7 @@ import logging
 import tqdm
 
 from pathlib import Path
-from typing import List, Mapping
+from typing import List, Mapping, Any
 
 
 class TqdmLoggingHandler(logging.Handler):
@@ -93,14 +94,14 @@ def rglob_multi(root: Path, patterns: List[str]) -> List[Path]:
     return files
 
 
-def paths_to_relative(root, paths):
+def paths_to_relative(root, paths) -> List:
     out = []
     for path in paths:
         out.append(os.path.relpath(path, root))
     return out
 
 
-def hash_file_sha256(path: Path):
+def hash_file_sha256(path: Path) -> str:
     hash = hashlib.sha256()
     with open(path, "rb") as f:
         while True:
@@ -111,7 +112,15 @@ def hash_file_sha256(path: Path):
     return hash.hexdigest()
 
 
-def resolve_platform_name():
+def hash_object_sha256(obj: Any) -> str:
+    data = json.dumps(obj, sort_keys=True)
+    hash = hashlib.sha256()
+    hash.update(data.encode())
+
+    return hash.hexdigest()
+
+
+def resolve_platform_name() -> str:
     plat = sys.platform
     arch = struct.calcsize("P") * 8
     assert arch in [32, 64]
@@ -125,6 +134,18 @@ def resolve_platform_name():
     else:
         raise Exception(f"Unsupported platform {plat}")
     return f"{plat}{str(arch)}"
+
+
+def get_dotpath_value(key: str, mapping: Mapping) -> Any:
+    keys = key.split(".")
+    current = mapping
+    for k in keys:
+        if k not in current:
+            raise KeyError(k)
+        current = current[k]
+        if k != keys[-1] and not isinstance(current, Mapping):
+            raise KeyError(k)
+    return current
 
 
 def set_dot_notation(target: dict, key: str, value):

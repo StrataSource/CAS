@@ -3,6 +3,7 @@ import cas.common.utilities as utilities
 import json
 import os
 from pathlib import Path
+from typing import Mapping
 
 from dotmap import DotMap
 
@@ -28,27 +29,33 @@ class CacheManager:
     def __setitem__(self, key, value):
         self._caches[key] = value
 
+    def __getattr__(self, key):
+        if key in {"_root", "_file", "_caches"}:
+            return super(self.__class__, self).__getattribute__(key)
+        return self._caches[key]
+
+    def __setattr__(self, key, value):
+        if key in {"_root", "_file", "_caches"}:
+            return super(self.__class__, self).__setattr__(key, value)
+        self._caches[key] = value
+
 
 class FileCache:
     """
     Implements a cache of file hashes
     """
 
-    def __init__(self, manager: CacheManager, namespace: str):
+    def __init__(self, manager: CacheManager, cache: Mapping):
         self._manager = manager
-        self._namespace = namespace
-        self._cache = self._manager._caches[namespace]
+        self._cache = cache
 
-    def save(self):
+    def garbage_collect(self):
         # garbage collect paths that no longer exist
         self._cache = {
             k: v
             for k, v in self._cache.items()
             if self._manager._root.joinpath(k).exists()
         }
-
-        self._manager._caches[self._namespace] = self._cache
-        self._manager.save()
 
     def validate(self, path: Path):
         if not path.exists():

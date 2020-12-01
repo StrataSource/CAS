@@ -77,17 +77,6 @@ class DataResolver:
             }
         )
 
-    def _resolve_key_str(self, key: str, eval_locals: Mapping):
-        keys = key.split(".")
-        current = eval_locals
-        for k in keys:
-            if k not in current:
-                raise KeyError(k)
-            current = current[k]
-            if k != keys[-1] and not isinstance(current, Mapping):
-                raise KeyError(k)
-        return current
-
     def _inject_config_str(self, config: str, eval_locals: Mapping) -> str:
         """
         A terrible lexical parser for interpolated globals.
@@ -106,7 +95,7 @@ class DataResolver:
                 # read to end for key
                 inblock = True
             elif inblock and c == ")":
-                value = self._resolve_key_str(current, eval_locals)
+                value = utilities.get_dotpath_value(current, eval_locals)
                 if value is None:
                     raise Exception(
                         f"Value of configuration variable $({current}) was None"

@@ -1,5 +1,6 @@
 import logging
 import itertools
+import cas.common.utilities as utilities
 from cas.common.models import BuildEnvironment
 from cas.common.config import LazyDynamicDotMap
 from cas.common.cache import FileCache
@@ -59,20 +60,15 @@ class VPCInstance:
         self._solution = config.solution
         self._group = config.group
         self._platform = platform
-        self._cache = FileCache(self._env.cache, "vpc")
+
+        self._cache = self._env.cache.vpc
+        self._file_cache = FileCache(self._env.cache, self._cache.files)
         self._logger = logging.getLogger(__name__)
 
     def _list_all_vpcs(self) -> list:
         return itertools.chain(
             self._env.src.rglob("*.vpc"), self._env.src.rglob("*.vgc")
         )
-
-    def _requires_rebuild(self) -> bool:
-        # build a list of all VPC scripts in the project
-        for f in self._list_all_vpcs():
-            if not self._env.cache.validate(f):
-                return True
-            return
 
     def _process_vpc_args(self) -> VPCArguments:
         args = list(self._config.args)
@@ -106,25 +102,47 @@ class VPCInstance:
         for f in crc_files:
             f.unlink()
 
+    def _verify_argument_hash(self, args: List) -> bool:
+        old_hash = self._cache.get("args", None)
+        new_hash = utilities.hash_object_sha256(args)
+        self._cache["args"] = new_hash
+
+        if not old_hash:
+            return False
+        return old_hash == new_hash
+
     def run(self) -> bool:
-        # hash the VPC files and see if we need to rebuild
-        rebuild = False
+        args = self._process_vpc_args()
+        rebuild = False  # do we need to rebuild?
+
+        # hash the arguments
+        if not self._verify_argument_hash(args.to_list()):
+            rebuild = True
+
+        # hash the VPC files
         vpc_files = self._list_all_vpcs()
         for f in vpc_files:
-            if not self._cache.validate(f):
-                self._cache.put(f)
+            if not self._file_cache.validate(f):
+                self._file_cache.put(f)
                 rebuild = True
+
         if rebuild:
-            self._cache.save()
+            self._file_cache.garbage_collect()
+            self._env.cache.save()
             self._clear_crc_files()
 
         if not rebuild:
             self._logger.info("scripts are unchanged, not running VPC")
             return True
 
-        args = self._process_vpc_args()
         args = [
             self._env.get_tool("vpc", self._env.config.path.devtools.joinpath("bin"))
         ] + args.to_list()
         ret = self._env.run_tool(args, cwd=self._env.src)
-        return ret == 0
+
+        # ensure cache is invalidated if vpc fails
+        if not ret == 0:
+            self._env.cache.vpc = {}
+            self._env.cache.save()
+            return False
+        return True

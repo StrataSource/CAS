@@ -115,6 +115,7 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
                 sysroot_file.unlink()
 
         if not sysroot_file.exists():
+            self._logger.info("starting download of SteamRT docker image")
             response = requests.get(STEAMRT_IMAGE_URL, stream=True, timeout=1)
             with tqdm.tqdm(
                 unit="B",
