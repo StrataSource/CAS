@@ -135,8 +135,18 @@ class VPCInstance:
             self._logger.info("scripts are unchanged, not running VPC")
             return True
 
+        # select the right executable for our platform
+        if sys.platform == "win32":
+            vpc_bin = "vpc"
+        elif sys.platform == "darwin":
+            vpc_bin = "vpc_osx"
+        elif sys.platform == "linux":
+            vpc_bin = "vpc_linux"
+        else:
+            raise NotImplementedError()
+
         args = [
-            self._env.get_tool("vpc", self._env.config.path.devtools.joinpath("bin"))
+            self._env.get_tool(vpc_bin, self._env.config.path.devtools.joinpath("bin"))
         ] + args.to_list()
         ret = self._env.run_tool(args, cwd=self._env.src)
 

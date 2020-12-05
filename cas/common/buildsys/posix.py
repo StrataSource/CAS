@@ -173,6 +173,8 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
             "run",
             "--rm",
             "-i",
+            "-u",
+            f"{os.getuid()}:{os.getgid()}",
             "-v",
             f"{root_path}:{root_path}",
             "-w",
