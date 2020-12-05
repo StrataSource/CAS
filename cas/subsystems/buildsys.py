@@ -33,17 +33,19 @@ class BuildsysSubsystem(BuildSubsystem):
     def build(self) -> BuildResult:
         # configure stage (run VPC, build makefiles)
         if self.config.configure:
+            # first we need to bootstrap VPC
+            self._logger.info("bootstrapping VPC")
+            if not self._compiler.bootstrap():
+                return BuildResult(False)
+
+            self._logger.info("running VPC")
             vpc = VPCInstance(self.env, self.config, self._platform)
             if not vpc.run() or not self._compiler.configure():
                 return BuildResult(False)
 
-        # force clean for staging/release
-        if self.env.build_type != "trunk" and not self._compiler.clean():
-            self._logger.error("Mandatory clean for staging/release builds failed!")
-            return BuildResult(False)
-
         # compile stage (compile dependencies and engine)
         if self.config.compile:
+            self._logger.info("compiling")
             if not self._compiler.build():
                 return BuildResult(False)
 
