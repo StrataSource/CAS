@@ -150,6 +150,7 @@ class AssetSubsystem(BuildSubsystem):
         """
         jobs = []
 
+        _async_mod_init()
         def callback(func: Callable[[Mapping[str, Any]], bool], params: Sequence[Any]):
             jobs.append(func(*params))
 
