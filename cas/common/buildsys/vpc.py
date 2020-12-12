@@ -61,8 +61,11 @@ class VPCInstance:
         self._group = config.group
         self._platform = platform
 
-        self._cache = self._env.cache.vpc
-        self._file_cache = FileCache(self._env.cache, self._cache.files)
+        self._cache = self._env.cache["vpc"]
+        if "files" not in self._cache:
+            self._cache["files"] = {}
+
+        self._file_cache = FileCache(self._env.cache, self._cache["files"])
         self._logger = logging.getLogger(__name__)
 
     def _list_all_vpcs(self) -> list:

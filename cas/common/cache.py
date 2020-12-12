@@ -24,19 +24,11 @@ class CacheManager:
             f.write(json.dumps(self._caches.toDict()))
 
     def __getitem__(self, key):
+        if key not in self._caches:
+            self._caches[key] = {}
         return self._caches[key]
 
     def __setitem__(self, key, value):
-        self._caches[key] = value
-
-    def __getattr__(self, key):
-        if key in {"_root", "_file", "_caches"}:
-            return super(self.__class__, self).__getattribute__(key)
-        return self._caches[key]
-
-    def __setattr__(self, key, value):
-        if key in {"_root", "_file", "_caches"}:
-            return super(self.__class__, self).__setattr__(key, value)
         self._caches[key] = value
 
 

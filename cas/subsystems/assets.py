@@ -67,7 +67,7 @@ class AssetSubsystem(BuildSubsystem):
         self._args = self.env.config.args
         self._dry_run = self._args.dry_run
 
-        self._cache = FileCache(self.env.cache, "assets")
+        self._cache = FileCache(self.env.cache, self.env.cache["assets"])
 
     def _get_asset_driver(self, name: str) -> BaseDriver:
         driver = self._drivers.get(name)
@@ -278,7 +278,7 @@ class AssetSubsystem(BuildSubsystem):
                 for f in hash_outputs[aid]:
                     self._cache.put(f)
 
-        self._cache.save()
+        self.env.cache.save()
         return True
 
     def build(self) -> BuildResult:
