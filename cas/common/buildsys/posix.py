@@ -173,6 +173,8 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
             "run",
             "--rm",
             "-i",
+            "-u",
+            f"{os.getuid()}:{os.getgid()}",
             "-v",
             f"{root_path}:{root_path}",
             "-w",
@@ -242,18 +244,20 @@ class PosixCompiler(BaseCompiler):
                 return False
         return True
 
-    def _run_makefile(self, clean: bool = False) -> bool:
+    def _build_vpc(self, clean: bool = False) -> bool:
+        args = ["clean"] if clean else []
+        return self._run_makefile("Makefile", args, "utils/vpc")
+
+    def _run_makefile(self, file: str, args: List[str], path_suffix: None) -> bool:
         jobs = self._config.get("jobs", multiprocessing.cpu_count())
         sanitizers = self._config.sanitizers
 
         args = [
             "make",
             "-f",
-            self._makefile,
+            file,
             f"-j{jobs}",
-        ]
-        if self._project is not None:
-            args.append(self._project)
+        ] + args
 
         envvars = {
             "CFG": self._build_type,
@@ -265,14 +269,32 @@ class PosixCompiler(BaseCompiler):
             "VALVE_NO_AUTO_P4": True,
         }
 
-        return self._compile_env.run(args, utilities.map_to_envvars(envvars)) == 0
+        return (
+            self._compile_env.run(args, utilities.map_to_envvars(envvars), path_suffix)
+            == 0
+        )
+
+    def _run_project(self, clean: bool = False) -> bool:
+        args = []
+        if clean:
+            args.append("clean")
+        elif self._project is not None:
+            args.append(self._project)
+
+        return self._run_makefile(self._makefile, args, clean)
+
+    def bootstrap(self) -> bool:
+        return self._build_vpc()
 
     def clean(self) -> bool:
-        if not self._build_dependencies(True):
-            self._logger.error("dependency clean failed; run with --verbose to see why")
+        if not self._build_vpc(True):
+            self._logger.error("vpc clean failed")
 
-        if not self._run_makefile(True):
-            self._logger.error("clean failed")
+        if not self._build_dependencies(True):
+            self._logger.error("dependency clean failed")
+
+        if not self._run_project(True):
+            self._logger.error("main project clean failed")
 
         return True
 
@@ -287,7 +309,7 @@ class PosixCompiler(BaseCompiler):
         return True
 
     def build(self) -> bool:
-        if not self._run_makefile():
+        if not self._run_project():
             self._logger.error("build failed")
             return False
         return True

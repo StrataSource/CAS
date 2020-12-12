@@ -15,19 +15,25 @@ class BaseCompiler:
         self._platform = platform
         self._logger = logging.getLogger(self.__class__.__module__)
 
-    def clean(self):
+    def bootstrap(self) -> bool:
+        """
+        Compiles any dependencies required for the configure stage.
+        """
+        return True
+
+    def clean(self) -> bool:
         """
         Removes all output files of the project.
         """
         raise NotImplementedError()
 
-    def configure(self):
+    def configure(self) -> bool:
         """
         Generates the necessary files to build the project.
         """
         return NotImplementedError()
 
-    def build(self):
+    def build(self) -> bool:
         """
         Compiles the project.
         """
