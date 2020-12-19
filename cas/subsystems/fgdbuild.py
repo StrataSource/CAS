@@ -51,7 +51,6 @@ class FGDBuildSubsystem(BuildSubsystem):
             shutil.rmtree(hammer_dir)
 
         shutil.copytree(srcpath.joinpath("hammer"), hammer_dir)
-        shutil.copytree(srcpath.joinpath("instances"), instance_dir, dirs_exist_ok=True)
 
         return BuildResult(True)
 
