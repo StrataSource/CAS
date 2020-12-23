@@ -284,7 +284,7 @@ class PosixCompiler(BaseCompiler):
         return self._run_makefile(self._makefile, args, clean)
 
     def bootstrap(self) -> bool:
-        return self._build_vpc()
+        return True 
 
     def clean(self) -> bool:
         if not self._build_vpc(True):
