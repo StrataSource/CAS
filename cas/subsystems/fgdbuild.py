@@ -42,20 +42,23 @@ class FGDBuildSubsystem(BuildSubsystem):
                 False,
             )
 
-        shutil.copy(outfile, destpath.joinpath("bin", f"{project}.fgd"))
-
         hammer_dir = destpath.joinpath("hammer")
-        instance_dir = destpath.joinpath("sdk_content/maps/instances")
 
-        if hammer_dir.exists():
-            shutil.rmtree(hammer_dir)
-
-        shutil.copytree(srcpath.joinpath("hammer"), hammer_dir)
+        shutil.copy(outfile, hammer_dir.joinpath("cfg", f"{project}.fgd"))
+        
+        self.override_folder(srcpath.joinpath("hammer", "materials"), hammer_dir.joinpath("materials"))
+        self.override_folder(srcpath.joinpath("hammer", "models"), hammer_dir.joinpath("models"))
+        self.override_folder(srcpath.joinpath("hammer", "scripts"), hammer_dir.joinpath("scripts"))
 
         return BuildResult(True)
 
     def clean(self) -> bool:
         return True
+
+    def override_folder(self, src, dest):
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
 
 
 _subsystem = FGDBuildSubsystem
