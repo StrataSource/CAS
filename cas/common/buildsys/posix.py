@@ -113,14 +113,6 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
             rebuild_image = True
 
         sysroot_file = cache_folder.joinpath("steamrt-sysroot.tar.gz")
-        if sysroot_file.exists():
-            sysroot_hash = utilities.hash_file_sha256(sysroot_file)
-            if not sysroot_hash == STEAMRT_IMAGE_SHA256:
-                self._logger.warning(
-                    "SteamRT docker image hash does not match, redownloading!"
-                )
-                sysroot_file.unlink()
-
         if not sysroot_file.exists():
             self._logger.info("starting download of SteamRT docker image")
             response = requests.get(STEAMRT_IMAGE_URL, stream=True, timeout=1)
@@ -141,7 +133,7 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
             response = requests.get(STEAMRT_HASH_URL, stream=False, timeout=1)
             dockerfile_hash = STEAMRT_IMAGE_SHA256
             for line in response.iter_lines():
-                line = line.decode('utf-8')
+                line = line.decode("utf-8")
                 if (
                     "com.valvesoftware.SteamRuntime.Sdk-amd64,i386-soldier-sysroot.tar.gz"
                     in line
