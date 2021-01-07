@@ -23,6 +23,7 @@ STEAMRT_IMAGE_URL = (
 STEAMRT_IMAGE_SHA256 = (
     "4a77fbd1ba45286eedf0446ecfd7d42ab0cc53bc1bc0cecd53efd75ba040598f"
 )
+STEAMRT_HASH_URL = STEAMRT_REPO_URL + "/SHA256SUMS"
 
 
 class BaseCompileEnvironment:
@@ -66,8 +67,14 @@ class NativeCompileEnvironment(BaseCompileEnvironment):
     def run(
         self, args: List[str], env: Mapping[str, str] = {}, path_suffix: str = None
     ) -> int:
-        cwd = self._env.config.path.src.joinpath(path_suffix)
-        return self._env.run_tool(args, env=self._build_env(env), cwd=cwd).returncode
+        root_path = self._env.config.path.root
+        cwd = str(root_path.joinpath("src"))
+        if path_suffix:
+            cwd += f"/{path_suffix}"
+        print(cwd)
+        return self._env.run_subprocess(
+            args, env=self._build_env(env), cwd=cwd
+        ).returncode
 
 
 class ChrootCompileEnvironment(BaseCompileEnvironment):
@@ -130,11 +137,24 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
                             progress.update(len(chunk))
                             f.write(chunk)
 
+            # Obtain the hash from the steam repo
+            response = requests.get(STEAMRT_HASH_URL, stream=False, timeout=1)
+            dockerfile_hash = STEAMRT_IMAGE_SHA256
+            for line in response.iter_lines():
+                line = line.decode('utf-8')
+                if (
+                    "com.valvesoftware.SteamRuntime.Sdk-amd64,i386-soldier-sysroot.tar.gz"
+                    in line
+                ):
+                    s = line.split(" ")
+                    dockerfile_hash = s[0]
+                    break
+
             # verify the hash
             sysroot_hash = utilities.hash_file_sha256(sysroot_file)
-            if not sysroot_hash == STEAMRT_IMAGE_SHA256:
+            if not sysroot_hash == dockerfile_hash:
                 self._logger.error("Failed to verify the SteamRT docker image hash")
-                self._logger.error(f"Wanted {STEAMRT_IMAGE_SHA256}")
+                self._logger.error(f"Wanted {dockerfile_hash}")
                 self._logger.error(f"Got {sysroot_hash}")
                 sysroot_file.unlink()
                 return False
@@ -284,7 +304,7 @@ class PosixCompiler(BaseCompiler):
         return self._run_makefile(self._makefile, args, clean)
 
     def bootstrap(self) -> bool:
-        return self._build_vpc()
+        return True
 
     def clean(self) -> bool:
         if not self._build_vpc(True):

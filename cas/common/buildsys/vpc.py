@@ -144,7 +144,7 @@ class VPCInstance:
         elif sys.platform == "darwin":
             vpc_bin = "vpc_osx"
         elif sys.platform == "linux":
-            vpc_bin = "vpc_linux"
+            vpc_bin = "vpc"
         else:
             raise NotImplementedError()
 
