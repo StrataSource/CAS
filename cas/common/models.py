@@ -89,16 +89,16 @@ class BuildEnvironment:
         if src is None:
             src = self.bindir
         assert not tool.endswith(".exe")
-        if sys.platform == "win32":
+        if utilities.is_platform_windows():
             tool += ".exe"
         return src.joinpath(tool).resolve()
 
     def get_lib(self, lib: str) -> Path:
-        if sys.platform == "win32":
+        if utilities.is_platform_windows():
             lib += ".dll"
-        elif sys.platform == "darwin":
+        elif utilities.is_platform_osx():
             lib += ".dylib"
-        elif sys.platform == "linux":
+        elif utilities.is_platform_linux():
             lib += ".so"
         else:
             raise NotImplementedError()

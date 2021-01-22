@@ -3,6 +3,7 @@ from cas.common.buildsys.msbuild import MSBuildCompiler
 from cas.common.buildsys.posix import PosixCompiler
 from cas.common.buildsys.vpc import VPCInstance
 
+import cas.common.utilities
 import os
 import sys
 from pathlib import Path
@@ -16,16 +17,9 @@ class BuildsysSubsystem(BuildSubsystem):
         # default to the 64-bit version of our current platform
         self._platform = config.get("platform")
         if not self._platform:
-            if sys.platform == "win32":
-                self._platform = "win64"
-            elif sys.platform == "darwin":
-                self._platform = "osx64"
-            elif sys.platform == "linux":
-                self._platform = "linux64"
-            else:
-                raise NotImplementedError()
+            self._platform = cas.common.utilities.resolve_platform_name()
 
-        if sys.platform == "win32":
+        if cas.common.utilities.is_platform_windows():
             self._compiler = MSBuildCompiler(self.env, self.config, self._platform)
         else:
             self._compiler = PosixCompiler(self.env, self.config, self._platform)

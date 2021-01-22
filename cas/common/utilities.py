@@ -125,8 +125,12 @@ def resolve_platform_name() -> str:
     arch = struct.calcsize("P") * 8
     assert arch in [32, 64]
 
-    if plat == "win32":
+    if plat == "win32" or plat.startswith("msys") or plat.startswith("cygwin"):
         plat = "win"
+    elif plat.startswith("freebsd"):
+        plat = "freebsd"
+    elif plat.startswith("openbsd"):
+        plat = "openbsd"
     elif plat.startswith("darwin"):
         plat = "osx"
     elif plat.startswith("linux"):
@@ -134,6 +138,38 @@ def resolve_platform_name() -> str:
     else:
         raise Exception(f"Unsupported platform {plat}")
     return f"{plat}{str(arch)}"
+
+
+# Simply resolves the OS name, doesn't care about the actual arch
+# Possible returns: win, osx, linux, freebsd, openbsd
+def resolve_os_name() -> str:
+    plat = sys.platform
+    if plat == "win32" or plat.startswith("msys") or plat.startswith("cygwin"):
+        plat = "win"
+    elif plat.startswith("freebsd"):
+        plat = "freebsd"
+    elif plat.startswith("openbsd"):
+        plat = "openbsd"
+    elif plat.startswith("darwin"):
+        plat = "osx"
+    elif plat.startswith("linux"):
+        plat = "linux"
+    return plat
+
+
+def is_platform_windows() -> bool:
+    plat = sys.platform
+    if plat == "win32" or plat.startswith("msys") or plat.startswith("cygwin"):
+        return True
+    return False
+
+
+def is_platform_linux() -> bool:
+    return sys.platform.startswith("linux")
+
+
+def is_platform_osx() -> bool:
+    return sys.platform.startswith("osx")
 
 
 def get_dotpath_value(key: str, mapping: Mapping) -> Any:

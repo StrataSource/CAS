@@ -1,6 +1,7 @@
 from cas.common.models import BuildResult, BuildSubsystem
 from pathlib import Path
 
+import cas.common.utilities
 import sys
 import getpass
 
@@ -26,11 +27,11 @@ class SteamworksSubsystem(BuildSubsystem):
         tool_dir = Path(self.config.tooldir).resolve()
         tool_path = None
 
-        if sys.platform == "win32":
+        if cas.common.utilities.is_platform_windows():
             tool_path = tool_dir.joinpath("builder", "steamcmd.exe")
-        elif sys.platform == "darwin":
+        elif cas.common.utilities.is_platform_osx():
             tool_path = tool_dir.joinpath("builder_osx", "steamcmd.sh")
-        elif sys.platform == "linux":
+        elif cas.common.utilities.is_platform_linux():
             tool_path = tool_dir.joinpath("builder_linux", "steamcmd.sh")
         else:
             raise NotImplementedError(f"unsupported platform {sys.platform}")
@@ -39,7 +40,9 @@ class SteamworksSubsystem(BuildSubsystem):
         for script in self.config.scripts:
             script_file = tool_dir.joinpath("scripts", f"app_build_{script}.vdf")
             if not script_file.exists():
-                self._logger.error(f'Unable to find SteamCMD script at "{script_file}"!')
+                self._logger.error(
+                    f'Unable to find SteamCMD script at "{script_file}"!'
+                )
                 return False
             script_cmd.append("+run_app_build_http")
             script_cmd.append(script_file)

@@ -1,15 +1,16 @@
 from pathlib import Path
 import sys
 import logging
+import cas.common.utilities
 
 import vdf
 
-if sys.platform == "win32":
+if cas.common.utilities.is_platform_windows():
     import winreg
 
 
 def get_steam_path() -> Path:
-    if sys.platform == "win32":
+    if cas.common.utilities.is_platform_windows():
         steam_key = winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
             r"SOFTWARE\WOW6432Node\Valve\Steam",

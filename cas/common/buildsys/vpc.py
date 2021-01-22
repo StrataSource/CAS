@@ -99,7 +99,7 @@ class VPCInstance:
 
     def _clear_crc_files(self):
         # Don't do this on Windows, it's an unnecessary slowdown
-        if sys.platform == "win32":
+        if utilities.is_platform_windows():
             return
         crc_files = self._env.src.rglob("*.vpc_crc")
         for f in crc_files:
@@ -139,11 +139,11 @@ class VPCInstance:
             return True
 
         # select the right executable for our platform
-        if sys.platform == "win32":
+        if utilities.is_platform_windows():
             vpc_bin = "vpc"
-        elif sys.platform == "darwin":
+        elif utilities.is_platform_osx():
             vpc_bin = "vpc_osx"
-        elif sys.platform == "linux":
+        elif utilities.is_platform_linux():
             vpc_bin = "vpc"
         else:
             raise NotImplementedError()
