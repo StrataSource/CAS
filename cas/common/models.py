@@ -76,7 +76,7 @@ class BuildEnvironment:
                 )
 
         if not self.bindir.exists():
-            raise Exception("Could not find the bin directory")
+            raise Exception("Could not find the bin directory ({0})".format(self.bindir))
 
         logging.debug(f"using bin directory {self.bindir}")
 
