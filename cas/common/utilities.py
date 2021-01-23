@@ -172,6 +172,11 @@ def is_platform_osx() -> bool:
     return sys.platform.startswith("osx")
 
 
+# Returns if we're running *native* windows, so not cygwin or msys
+def is_platform_native_windows() -> bool:
+    return sys.platform.startswith("win")
+
+
 def get_dotpath_value(key: str, mapping: Mapping) -> Any:
     keys = key.split(".")
     current = mapping

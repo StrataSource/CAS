@@ -5,20 +5,19 @@ import cas.common.utilities
 
 import vdf
 
-if cas.common.utilities.is_platform_windows():
-    import winreg
+import wslwinreg
 
 
 def get_steam_path() -> Path:
-    if cas.common.utilities.is_platform_windows():
-        steam_key = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
+    if cas.common.utilities.is_platform_native_windows():
+        steam_key = wslwinreg.OpenKey(
+            wslwinreg.HKEY_LOCAL_MACHINE,
             r"SOFTWARE\WOW6432Node\Valve\Steam",
             0,
-            winreg.KEY_READ,
+            wslwinreg.KEY_READ,
         )
-        steam_path = winreg.QueryValueEx(steam_key, "InstallPath")
-        winreg.CloseKey(steam_key)
+        steam_path = wslwinreg.QueryValueEx(steam_key, "InstallPath")
+        wslwinreg.CloseKey(steam_key)
 
         return Path(steam_path[0]).resolve()
     else:

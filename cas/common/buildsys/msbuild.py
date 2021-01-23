@@ -6,9 +6,7 @@ import os
 import sys
 from typing import List, Dict
 
-winreg = None
-if utilities.is_platform_windows():
-    import winreg
+import wslwinreg
 
 # JM: todo: this should probably not be hardcoded
 MSBUILD_PATH = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin/amd64/MSBuild.exe"
@@ -28,16 +26,16 @@ class MSBuildCompiler(BaseCompiler):
         self._setup_winsdk()
 
     def _setup_winsdk(self):
-        sdk_key = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE,
+        sdk_key = wslwinreg.OpenKey(
+            wslwinreg.HKEY_LOCAL_MACHINE,
             r"SOFTWARE\WOW6432Node\Microsoft\Microsoft SDKs\Windows\v10.0",
             0,
-            winreg.KEY_READ,
+            wslwinreg.KEY_READ,
         )
-        sdk_path = winreg.QueryValueEx(sdk_key, "InstallationFolder")
-        sdk_ver = winreg.QueryValueEx(sdk_key, "ProductVersion")
+        sdk_path = wslwinreg.QueryValueEx(sdk_key, "InstallationFolder")
+        sdk_ver = wslwinreg.QueryValueEx(sdk_key, "ProductVersion")
 
-        winreg.CloseKey(sdk_key)
+        wslwinreg.CloseKey(sdk_key)
         self._winsdk_path = os.path.join(sdk_path[0], f"bin\\{sdk_ver[0]}.0\\x64")
 
     def _invoke_msbuild(self, targets: List[str], parameters: Dict[str, str]) -> bool:

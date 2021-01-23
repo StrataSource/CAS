@@ -30,6 +30,7 @@ setuptools.setup(
         "tqdm",
         "vdf",
         "requests",
+        "wslwinreg",
     ],
     dependency_links=["https://github.com/TeamSpen210/srctools#egg=srctools"],
 )
