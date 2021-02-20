@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="cas",
-    version="1.0.2",
+    version="1.0.5",
     description="Chaos Automation System",
     url="https://github.com/ChaosInitiative/CAS",
     author="Chaos Initiative",
