@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="cas",
-    version="1.0.7",
+    version="1.0.8",
     description="Chaos Automation System",
     url="https://github.com/ChaosInitiative/CAS",
     author="Chaos Initiative",
@@ -14,7 +14,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(include=["cas", "cas.*"]),
-    package_data={"cas": ["cas/schemas/**/*.json"]},
+    package_data={"cas": ["schemas/**/*.json"]},
     include_package_data=True,
     entry_points={"console_scripts": ["casbuild = cas.cli:main"]},
     classifiers=[
