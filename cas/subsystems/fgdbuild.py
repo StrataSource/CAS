@@ -12,7 +12,7 @@ class FGDBuildSubsystem(BuildSubsystem):
     Subsystem that builds FGDs and Hammer assets from HammerAddons
     """
 
-    def build(self) -> BuildResult:
+    def build(self, force: bool = False) -> BuildResult:
         project = self.env.config.options.project
 
         srcpath = Path(self.env.root).joinpath(self.config.source).resolve()
@@ -45,10 +45,16 @@ class FGDBuildSubsystem(BuildSubsystem):
         hammer_dir = destpath.joinpath("hammer")
 
         shutil.copy(outfile, hammer_dir.joinpath("cfg", f"{project}.fgd"))
-        
-        self.override_folder(srcpath.joinpath("hammer", "materials"), hammer_dir.joinpath("materials"))
-        self.override_folder(srcpath.joinpath("hammer", "models"), hammer_dir.joinpath("models"))
-        self.override_folder(srcpath.joinpath("hammer", "scripts"), hammer_dir.joinpath("scripts"))
+
+        self.override_folder(
+            srcpath.joinpath("hammer", "materials"), hammer_dir.joinpath("materials")
+        )
+        self.override_folder(
+            srcpath.joinpath("hammer", "models"), hammer_dir.joinpath("models")
+        )
+        self.override_folder(
+            srcpath.joinpath("hammer", "scripts"), hammer_dir.joinpath("scripts")
+        )
 
         return BuildResult(True)
 

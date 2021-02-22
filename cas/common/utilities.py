@@ -8,6 +8,7 @@ import logging
 import tqdm
 
 from pathlib import Path
+from dotmap import DotMap
 from typing import List, Mapping, Any
 
 
@@ -113,6 +114,10 @@ def hash_file_sha256(path: Path) -> str:
 
 
 def hash_object_sha256(obj: Any) -> str:
+    # DotMap must be converted to dict before serialisation
+    if isinstance(obj, DotMap):
+        obj = obj.toDict()
+
     data = json.dumps(obj, sort_keys=True)
     hash = hashlib.sha256()
     hash.update(data.encode())

@@ -6,7 +6,7 @@ class CustomSubsystem(BuildSubsystem):
     Subsystem that invokes a custom program on build and clean steps.
     """
 
-    def build(self) -> BuildResult:
+    def build(self, force: bool = False) -> BuildResult:
         args = self.config.get("build")
         return True if not args else self.env.run_tool(args, cwd=self.config.cwd) == 0
 

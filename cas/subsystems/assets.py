@@ -67,7 +67,7 @@ class AssetSubsystem(BuildSubsystem):
         self._args = self.env.config.args
         self._dry_run = self._args.dry_run
 
-        self._cache = FileCache(self.env.cache, self.env.cache["assets"])
+        self._file_cache = FileCache(self.env.cache, self._cache["files"])
 
     def _get_asset_driver(self, name: str) -> BaseDriver:
         driver = self._drivers.get(name)
@@ -149,8 +149,8 @@ class AssetSubsystem(BuildSubsystem):
         Builds assets synchronously.
         """
         jobs = []
-
         _async_mod_init()
+
         def callback(func: Callable[[Mapping[str, Any]], bool], params: Sequence[Any]):
             jobs.append(func(*params))
 
@@ -215,12 +215,12 @@ class AssetSubsystem(BuildSubsystem):
                             f"Required dependency '{f}' could not be located!"
                         )
                         return False
-                    if not self._cache.validate(f):
+                    if not self._file_cache.validate(f):
                         invalidated = True
 
                 for f in result.outputs:
                     f = f.resolve()
-                    if not self._cache.validate(f):
+                    if not self._file_cache.validate(f):
                         invalidated = True
 
                 aid = asset.get_id()
@@ -275,14 +275,19 @@ class AssetSubsystem(BuildSubsystem):
                 # save updated hashes
                 aid = asset.get_id()
                 for f in hash_inputs[aid]:
-                    self._cache.put(f)
+                    self._file_cache.put(f)
                 for f in hash_outputs[aid]:
-                    self._cache.put(f)
+                    self._file_cache.put(f)
 
         self.env.cache.save()
         return True
 
-    def build(self) -> BuildResult:
+    def build(self, force: bool = False) -> BuildResult:
+        # wipe the cache if we're forcing a rebuild
+        if force:
+            self._logger.info("configuration changed, clearing cache")
+            self._file_cache.clear()
+
         return BuildResult(self._run_asset_build())
 
     def clean(self) -> bool:

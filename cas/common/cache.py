@@ -25,7 +25,7 @@ class CacheManager:
 
     def __getitem__(self, key):
         if key not in self._caches:
-            self._caches[key] = {}
+            self._caches[key] = DotMap()
         return self._caches[key]
 
     def __setitem__(self, key, value):
@@ -34,7 +34,7 @@ class CacheManager:
 
 class FileCache:
     """
-    Implements a cache of file hashes
+    Implements a cache of file hashes relative to the root of the cache manager
     """
 
     def __init__(self, manager: CacheManager, cache: Mapping):
@@ -65,3 +65,6 @@ class FileCache:
             )
         rel = path.relative_to(self._manager._root)
         self._cache[str(rel)] = utilities.hash_file_sha256(path)
+
+    def clear(self):
+        self._cache.clear()

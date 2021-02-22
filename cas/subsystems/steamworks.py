@@ -52,7 +52,7 @@ class SteamworksSubsystem(BuildSubsystem):
         ret = self.env.run_tool(args, cwd=self.env.src)
         return ret == 0
 
-    def build(self) -> BuildResult:
+    def build(self, force: bool = False) -> BuildResult:
         return BuildResult(self._run_steamcmd())
 
     def clean(self) -> bool:

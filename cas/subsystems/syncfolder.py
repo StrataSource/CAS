@@ -13,7 +13,7 @@ def _shutil_delete_force(action, name, exc):
 
 
 class SyncFolderSubsystem(BuildSubsystem):
-    def build(self) -> BuildResult:
+    def build(self, force: bool = False) -> BuildResult:
         from_dir = Path(self.config["from"]).resolve()
         to_dir = Path(self.config.to).resolve()
 

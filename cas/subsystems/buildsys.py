@@ -5,7 +5,6 @@ from cas.common.buildsys.vpc import VPCInstance
 
 import cas.common.utilities
 import os
-import sys
 from pathlib import Path
 
 
@@ -24,7 +23,7 @@ class BuildsysSubsystem(BuildSubsystem):
         else:
             self._compiler = PosixCompiler(self.env, self.config, self._platform)
 
-    def build(self) -> BuildResult:
+    def build(self, force: bool = False) -> BuildResult:
         # configure stage (run VPC, build makefiles)
         if self.config.configure:
             # first we need to bootstrap VPC
@@ -34,7 +33,7 @@ class BuildsysSubsystem(BuildSubsystem):
 
             self._logger.info("running VPC")
             vpc = VPCInstance(self.env, self.config, self._platform)
-            if not vpc.run() or not self._compiler.configure():
+            if not vpc.run(force) or not self._compiler.configure():
                 return BuildResult(False)
 
         # compile stage (compile dependencies and engine)

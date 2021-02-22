@@ -5,9 +5,8 @@ from pathlib import Path
 import cas.common.utilities as utilities
 
 import os
-import hashlib
-
 import vdf
+import hashlib
 
 
 class VPKArchive:
@@ -110,7 +109,7 @@ class VPKBuildSubsystem(BuildSubsystem):
 
         return VPKArchive(self, prefix, input_path, output_path, files)
 
-    def build(self) -> BuildResult:
+    def build(self, force: bool = False) -> BuildResult:
         outputs = {"files": []}
         for f in self.config.packfiles:
             vpk = self._get_vpk(f)

@@ -1,11 +1,11 @@
 import cas.common.utilities as utilities
 from cas.common.steamtools import SteamInstance
-from cas.common.config import ConfigurationUtilities
+from cas.common.config import ConfigurationUtilities, LazyDynamicBase
 from cas.common.cache import CacheManager
 
 from pathlib import Path
+from typing import Any
 import os
-import sys
 import logging
 import subprocess
 
@@ -139,13 +139,40 @@ class BuildSubsystem:
     """
 
     def __init__(self, env: BuildEnvironment, config: dict):
+        mod = self.__class__.__module__
+
         self.env = env
         self.config = config
-
-        mod = self.__class__.__module__
+        self._cache = env.cache["subsystems"][mod]
         self._logger = logging.getLogger(mod)
 
-    def build(self) -> BuildResult:
+    def _get_config_raw(self) -> Any:
+        # If we have a lazy config object then we need to extract its underlying raw data
+        if isinstance(self.config, LazyDynamicBase):
+            return self.config._data
+        else:
+            return self.config
+
+    def needs_rebuild(self) -> bool:
+        """
+        Checks whether this subsystem needs to force a rebuild,
+        based on whether its configuration hash has changed from the last successful build
+        """
+        old_hash = self._cache.get("config", None)
+        new_hash = utilities.hash_object_sha256(self._get_config_raw())
+        self._cache["config"] = new_hash
+
+        if not old_hash:
+            return False
+        return old_hash != new_hash
+
+    def rehash_config(self):
+        """
+        Rehashes the configuration and saves it in our cache
+        """
+        self._cache["config"] = utilities.hash_object_sha256(self._get_config_raw())
+
+    def build(self, force: bool = False) -> BuildResult:
         """
         Invokes the build logic of the subsystem.
         Returns a BuildResult with the result.

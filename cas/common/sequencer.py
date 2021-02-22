@@ -2,6 +2,7 @@ from cas.common.models import BuildEnvironment, BuildSubsystem
 from cas.common.config import DataResolverScope
 
 from pathlib import Path
+from typing import Mapping
 
 import importlib
 import logging
@@ -16,7 +17,7 @@ class Sequencer:
         self.env = BuildEnvironment(path, config)
 
         self._args = self.env.config.args
-        self._subsystems = {}
+        self._subsystems: Mapping[str, BuildSubsystem] = {}
         self._logger = logging.getLogger(__name__)
 
     def _load_subsystem(self, name: str, module: str, config: dict) -> BuildSubsystem:
@@ -61,15 +62,19 @@ class Sequencer:
 
         # run
         sys = self._subsystems[name]
+        force = sys.needs_rebuild()
+
         self._logger.info(f"running subsystem {name}")
         if self._args.clean:
             if not sys.clean():
                 return False
         else:
-            result = sys.build()
+            result = sys.build(force)
             scope._data.subsystems[name] = result
             if not result.success:
                 return False
+
+        sys.rehash_config()
         return True
 
     def run(self) -> bool:
