@@ -5,7 +5,6 @@ from cas.common.models import BuildEnvironment
 from cas.common.config import LazyDynamicDotMap
 from cas.common.cache import FileCache
 
-import sys
 from typing import List
 
 BUILD_TYPE_MAP = {
@@ -105,22 +104,8 @@ class VPCInstance:
         for f in crc_files:
             f.unlink()
 
-    def _verify_argument_hash(self, args: List) -> bool:
-        old_hash = self._cache.get("args", None)
-        new_hash = utilities.hash_object_sha256(args)
-        self._cache["args"] = new_hash
-
-        if not old_hash:
-            return False
-        return old_hash == new_hash
-
-    def run(self) -> bool:
+    def run(self, rebuild: False) -> bool:
         args = self._process_vpc_args()
-        rebuild = False  # do we need to rebuild?
-
-        # hash the arguments
-        if not self._verify_argument_hash(args.to_list()):
-            rebuild = True
 
         # hash the VPC files
         vpc_files = self._list_all_vpcs()
@@ -135,7 +120,7 @@ class VPCInstance:
             self._clear_crc_files()
 
         if not rebuild:
-            self._logger.info("scripts are unchanged, not running VPC")
+            self._logger.info("configuration is unchanged, not running VPC")
             return True
 
         # select the right executable for our platform

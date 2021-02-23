@@ -71,7 +71,7 @@ class VPKArchive:
             )
         args.extend(["k", str(vpk_path), str(cfile_path)])
 
-        returncode = self.sys.env.run_tool(args, cwd=self.input_path)
+        returncode = self.sys.env.run_tool(args, source=True, cwd=self.input_path)
         if returncode != 0:
             return False
 

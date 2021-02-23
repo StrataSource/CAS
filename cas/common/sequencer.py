@@ -62,7 +62,7 @@ class Sequencer:
 
         # run
         sys = self._subsystems[name]
-        force = sys.needs_rebuild()
+        force = self._args.force or sys.needs_rebuild()
 
         self._logger.info(f"running subsystem {name}")
         if self._args.clean:

@@ -4,7 +4,7 @@ from cas.common.config import ConfigurationUtilities, LazyDynamicBase
 from cas.common.cache import CacheManager
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 import os
 import logging
 import subprocess
@@ -111,13 +111,23 @@ class BuildEnvironment:
             predef["stderr"] = subprocess.DEVNULL
         return subprocess.run(*args, **dict(predef, **kwargs))
 
-    def run_tool(self, *args, **kwargs) -> int:
+    def run_tool(
+        self, args: list[str], source: bool = False, cwd: Union[str, Path] = None
+    ) -> int:
+        """
+        High-level interface to run an executable with extra parameters
+        """
         predef = {}
         predef["env"] = os.environ
-        predef["env"]["VPROJECT"] = str(self.config.path.vproject)
+
+        if source:
+            predef["env"]["VPROJECT"] = str(self.config.path.vproject)
+            predef["env"]["NOASSERT"] = "1"
+        if cwd:
+            predef["cwd"] = cwd
 
         try:
-            result = self.run_subprocess(*args, **dict(predef, **kwargs))
+            result = self.run_subprocess(args, **predef)
         except Exception as e:
             raise Exception(f"failed to execute tool with parameters: {args}") from e
         return result.returncode

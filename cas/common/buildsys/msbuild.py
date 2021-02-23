@@ -3,7 +3,6 @@ from cas.common.buildsys.shared import BaseCompiler
 import cas.common.utilities as utilities
 
 import os
-import sys
 from typing import List, Dict
 
 winreg = None

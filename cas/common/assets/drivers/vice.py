@@ -31,7 +31,7 @@ class ViceDriver(BatchedDriver):
         for asset in assets:
             args.append(str(asset.path))
 
-        result = self.env.run_tool(args)
+        result = self.env.run_tool(args, source=True)
         return result == 0
 
 
