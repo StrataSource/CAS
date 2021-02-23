@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import argparse
 import logging
@@ -10,18 +11,34 @@ import cas.common.utilities as utilities
 from cas.common.sequencer import Sequencer
 
 
+cjson_regex = re.compile(
+    r"(\".*?\"|\'.*?\')|(/\*.*?\*/|//[^\r\n]*$)", re.MULTILINE | re.DOTALL
+)
+
+
 def _resolve_root_path() -> Path:
     root = Path.cwd()
     while True:
         dirs = os.listdir(root)
         if "content" in dirs and "game" in dirs:
             # we may have a match, verify we have a valid path
-            if Path(os.path.join(root, "content", "cas.json")).exists():
+            if Path(os.path.join(root, "content", "cas.jsonc")).exists():
                 return Path(root).resolve()
         if not root.parent or root.parent == root:
             break
         root = root.parent
     return None
+
+
+def _load_cjson(text: str) -> dict:
+    def __re_sub(match):
+        if match.group(2) is not None:
+            return ""
+        else:
+            return match.group(1)
+
+    result = cjson_regex.sub(__re_sub, text)
+    return json.loads(result)
 
 
 def main():
@@ -70,7 +87,7 @@ def main():
         "-d",
         "--dry-run",
         action="store_true",
-        help="Prints the arguments that would be passed to VPC and exits.",
+        help="Prints the operations that would be performed and exits.",
     )
 
     parser.add_argument(
@@ -114,19 +131,15 @@ def main():
 
     content_path = root_path.joinpath("content")
 
-    config_file = content_path.joinpath("cas.json")
+    config_file = content_path.joinpath("cas.jsonc")
     if not config_file.exists():
         logger.error(
-            "Couldn't find cas.json. If you don't yet have one, please see the documentation for a template."
+            "Couldn't find cas.jsonc. If you don't yet have one, please see the documentation for a template."
         )
         exit(1)
 
-    with config_file.open("rb") as f:
-        config = DotMap(json.load(f))
-
-    cache_path = content_path.joinpath(".cas_cache.json")
-    if args.force and cache_path.exists():
-        cache_path.unlink()
+    with config_file.open("r") as f:
+        config = DotMap(_load_cjson(f.read()))
 
     # apply overrides
     if not args.override:
@@ -139,7 +152,7 @@ def main():
 
             # if it starts with [ or {, parse as json
             if val.startswith("[") or val.startswith("{"):
-                val = json.loads(val)
+                val = _load_cjson(val)
             elif val.isdigit():
                 val = int(val)
 
