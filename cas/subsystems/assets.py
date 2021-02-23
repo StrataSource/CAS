@@ -17,17 +17,21 @@ import pathlib
 import importlib
 import multiprocessing
 
+from multiprocessing.synchronize import Lock
 from typing import Mapping, Sequence, Callable, Any
 from pathlib import Path
 
 _schema_path = Path(cas.__file__).parent.absolute().joinpath("schemas")
 
-logger = None
+# set up our process shared logger
+lock: Lock = None
+logger: logging.Logger = None
 
 
-def _async_mod_init():
-    global logger
-    logger = multiprocessing.log_to_stderr(logging.INFO)
+def _async_mod_init(_lock: Lock):
+    global lock, logger
+    lock = _lock
+    logger = multiprocessing.get_logger()
 
 
 def _run_async_serial(
@@ -39,11 +43,13 @@ def _run_async_serial(
     if not context.logger:
         context.logger = logging.getLogger(driver.__class__.__module__)
 
-    context.logger.info(f"(CC) {str(relpath)}")
+    with lock:
+        context.logger.info(f"Compiling {str(relpath)}")
     success = driver.compile(context, asset)
 
     if not success:
-        context.logger.error(f"  Failed compile {str(relpath)}")
+        with lock:
+            context.logger.error(f"  Failed compile {str(relpath)}")
     return success
 
 
@@ -51,9 +57,10 @@ def _run_async_batched(
     context: AssetBuildContext, driver: BatchedDriver, assets: Sequence[Asset]
 ) -> bool:
     context.logger = logger
-    for asset in assets:
-        relpath = os.path.relpath(asset.path, driver.env.root)
-        context.logger.info(f"(CC) {str(relpath)}")
+    with lock:
+        for asset in assets:
+            relpath = os.path.relpath(asset.path, driver.env.root)
+            context.logger.info(f"Compiling {str(relpath)}")
     return driver.compile_all(context, assets)
 
 
@@ -149,7 +156,8 @@ class AssetSubsystem(BuildSubsystem):
         Builds assets synchronously.
         """
         jobs = []
-        _async_mod_init()
+        lock = multiprocessing.Lock()
+        _async_mod_init(lock)
 
         def callback(func: Callable[[Mapping[str, Any]], bool], params: Sequence[Any]):
             jobs.append(func(*params))
@@ -162,7 +170,10 @@ class AssetSubsystem(BuildSubsystem):
         Builds assets asynchronously.
         """
         jobs = []
-        pool = multiprocessing.Pool(self._args.threads, initializer=_async_mod_init)
+        lock = multiprocessing.Lock()
+        pool = multiprocessing.Pool(
+            self._args.threads, initializer=_async_mod_init, initargs=(lock,)
+        )
 
         def callback(func: Callable[[Mapping[str, Any]], bool], params: Sequence[Any]):
             jobs.append(pool.apply_async(func, params))
@@ -262,6 +273,7 @@ class AssetSubsystem(BuildSubsystem):
             context for context in contexts if context.driver.threadable() and threaded
         ]
 
+        multiprocessing.log_to_stderr(logging.INFO)
         if not self._build_assets_sync(sync_assets):
             self._logger.error("Build failed")
             return False
@@ -285,7 +297,7 @@ class AssetSubsystem(BuildSubsystem):
     def build(self, force: bool = False) -> BuildResult:
         # wipe the cache if we're forcing a rebuild
         if force:
-            self._logger.info("configuration changed, clearing cache")
+            self._logger.info("rebuild forced, clearing cache")
             self._file_cache.clear()
 
         return BuildResult(self._run_asset_build())
