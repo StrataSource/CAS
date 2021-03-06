@@ -60,13 +60,13 @@ class ModelDriver(SerialDriver):
 
     def precompile(self, context: AssetBuildContext, asset: Asset) -> List[str]:
         # TODO: perhaps we should have another way of doing this rather than jankily "autodetecting" the dest
-        gamedir = os.path.relpath(asset.path.parent, self.env.root)
+        gamedir = os.path.relpath(asset.path.parent, self.env.paths.root)
         gamedir = gamedir.replace("\\", "/").split("/")[1]
 
         inputs, outputs = self._parse_deps_from_vdf(asset.path)
         inputs = self._convert_relpaths(asset.path.parent, inputs)
         outputs = self._convert_relpaths(
-            self.env.game.joinpath(gamedir, "models"), outputs
+            self.env.paths.game.joinpath(gamedir, "models"), outputs
         )
 
         extra = set()

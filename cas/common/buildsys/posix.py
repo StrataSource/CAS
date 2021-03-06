@@ -67,7 +67,7 @@ class NativeCompileEnvironment(BaseCompileEnvironment):
     def run(
         self, args: List[str], env: Mapping[str, str] = {}, path_suffix: str = None
     ) -> int:
-        root_path = self._env.config.path.root
+        root_path = self._env.paths.root
         cwd = str(root_path.joinpath("src"))
         if path_suffix:
             cwd += f"/{path_suffix}"
@@ -85,7 +85,7 @@ class ChrootCompileEnvironment(BaseCompileEnvironment):
     def run(
         self, args: List[str], env: Mapping[str, str] = {}, path_suffix: str = None
     ) -> int:
-        cwd = self._env.config.path.src.joinpath(path_suffix)
+        cwd = self._env.paths.src.joinpath(path_suffix)
         defargs = ["schroot", "-c", self._env_config.name, "--", "bash", "-c"]
 
         return self._env.run_subprocess(
@@ -174,7 +174,7 @@ class DockerCompileEnvironment(BaseCompileEnvironment):
         if not self._ensure_installed():
             return 1
 
-        root_path = self._env.config.path.root
+        root_path = self._env.paths.root
 
         cwd = str(root_path.joinpath("src"))
         if path_suffix:

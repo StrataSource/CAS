@@ -37,7 +37,7 @@ def _async_mod_init(_lock: Lock):
 def _run_async_serial(
     context: AssetBuildContext, driver: SerialDriver, asset: Asset
 ) -> bool:
-    relpath = os.path.relpath(asset.path, driver.env.root)
+    relpath = os.path.relpath(asset.path, driver.env.paths.root)
 
     context.logger = logger
     if not context.logger:
@@ -59,7 +59,7 @@ def _run_async_batched(
     context.logger = logger
     with lock:
         for asset in assets:
-            relpath = os.path.relpath(asset.path, driver.env.root)
+            relpath = os.path.relpath(asset.path, driver.env.paths.root)
             context.logger.info(f"Compiling {str(relpath)}")
     return driver.compile_all(context, assets)
 
@@ -290,8 +290,6 @@ class AssetSubsystem(BuildSubsystem):
                     self._file_cache.put(f)
                 for f in hash_outputs[aid]:
                     self._file_cache.put(f)
-
-        self.env.cache.save()
         return True
 
     def build(self, force: bool = False) -> BuildResult:

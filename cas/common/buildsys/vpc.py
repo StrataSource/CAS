@@ -69,7 +69,7 @@ class VPCInstance:
 
     def _list_all_vpcs(self) -> list:
         return itertools.chain(
-            self._env.src.rglob("*.vpc"), self._env.src.rglob("*.vgc")
+            self._env.paths.src.rglob("*.vpc"), self._env.paths.src.rglob("*.vgc")
         )
 
     def _process_vpc_args(self) -> VPCArguments:
@@ -100,7 +100,7 @@ class VPCInstance:
         # Don't do this on Windows, it's an unnecessary slowdown
         if utilities.is_platform_windows():
             return
-        crc_files = self._env.src.rglob("*.vpc_crc")
+        crc_files = self._env.paths.src.rglob("*.vpc_crc")
         for f in crc_files:
             f.unlink()
 
@@ -116,7 +116,6 @@ class VPCInstance:
 
         if rebuild:
             self._file_cache.garbage_collect()
-            self._env.cache.save()
             self._clear_crc_files()
 
         if not rebuild:
@@ -134,13 +133,12 @@ class VPCInstance:
             raise NotImplementedError()
 
         args = [
-            self._env.get_tool(vpc_bin, self._env.config.path.devtools.joinpath("bin"))
+            self._env.get_tool(vpc_bin, self._env.paths.devtools.joinpath("bin"))
         ] + args.to_list()
-        ret = self._env.run_tool(args, cwd=self._env.src)
+        ret = self._env.run_tool(args, cwd=self._env.paths.src)
 
         # ensure cache is invalidated if vpc fails
         if not ret == 0:
             self._env.cache.vpc = {}
-            self._env.cache.save()
             return False
         return True

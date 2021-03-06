@@ -1,16 +1,15 @@
-from pathlib import Path
-import sys
-import logging
-import cas.common.utilities
-
 import vdf
+import logging
 
-if cas.common.utilities.is_platform_windows():
+from pathlib import Path
+from cas.common.utilities import is_platform_windows
+
+if is_platform_windows():
     import winreg
 
 
 def get_steam_path() -> Path:
-    if cas.common.utilities.is_platform_windows():
+    if is_platform_windows():
         steam_key = winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
             r"SOFTWARE\WOW6432Node\Valve\Steam",
@@ -75,11 +74,11 @@ class SteamInstance:
         logging.debug(f"{len(libraries)} num libraries detected")
 
         apps = []
-        for l in libraries:
-            for path in l.glob("appmanifest_*.acf"):
+        for lib in libraries:
+            for path in lib.glob("appmanifest_*.acf"):
                 if not path.is_file():
                     continue
-                app = SteamApp.from_acf(l, path)
+                app = SteamApp.from_acf(lib, path)
                 if not app.path.exists():
                     logging.warn(
                         f"Skipping steam app {app.appid} as ACF reported as installed but we cannot locate the folder"

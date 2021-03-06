@@ -6,7 +6,7 @@
     "title": "Configuration",
     "description": "Root AssetBuilder configuration",
     
-    "required": ["options", "subsystems"],
+    "required": ["options", "jobs"],
     "properties": {
         "options": {
             "type": "object",
@@ -16,77 +16,95 @@
             "required": ["project"],
             "properties": {
                 "project": {
+                    "type": "string",
                     "description": "The project namespace for your game or mod.",
-                    "type": "string"
+                    "examples": ["p2ce"]
                 },
-                "bin_path": {
-                    "description": "The location to source binaries from.",
-                    "type": "string"
-                },
-                "bin_appid": {
-                    "description": "The AppID of the app to source binaries from.",
-                    "type": "integer"
+                "tooling": {
+                    "type": "object",
+                    "title": "Tooling",
+                    "description": "Options to configure Source Engine tooling functionality.",
+                    "properties": {
+                        "enable": {
+                            "type": "boolean",
+                            "description": "Whether or not to enable tooling functionality."
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "The location to source tooling binaries from."
+                        },
+                        "appid": {
+                            "type": "integer",
+                            "description": "The AppID of the app to source tooling binaries from."
+                        }
+                    }
                 }
             }
         },
-        "subsystems": {
+        "jobs": {
             "type": "object",
-            "title": "Subsystems",
-            "description": "Key-value dictionary of subsystem instances to run.",
-            
-            "properties": {
-                "@conditions": { "type": "object", "additionalProperties": true }
-            },
-            "additionalProperties": { "$ref": "#/definitions/subsystem" }
+            "title": "Jobs",
+            "description": "Key-value dictionary of jobs to run.",
+            "additionalProperties": { "$ref": "#/definitions/job" }
         }
     },
 
     "definitions": {
-        "subsystem": {
-            "title": "Subsystem",
-            "description": "An entry to run a specific subsystem.",
+        "job": {
+            "title": "Job",
+            "description": "A unique execution unit that contains a number of steps.",
 
             "type": "object",
-            "required": ["module", "categories"],
+            "required": ["steps"],
             "properties": {
-                "module": {
-                    "type": "string",
-                    "title": "Module",
-                    "description": "The Python module to load.",
-                    
-                    "examples": ["assetbuilder.subsystems.buildsys"]
-                },
-                "categories": {
-                    "type": "array",
-                    "title": "Categories",
-                    "description": "The categories this subsystem should run for.",
-                    
-                    "examples": ["code"],
-                    "items": { "type": "string" }
-                },
-                "build_types": {
+                "on": {
                     "type": "array",
                     "title": "Build Types",
-                    "description": "The build types this subsystem should run for.",
-                    
+                    "description": "The build types this job should run for.",
+
                     "examples": [["staging", "release"]],
                     "items": {
                         "type": "string",
                         "enum": ["trunk", "staging", "release"]
                     }
                 },
-                "before_assets": {
-                    "type": "boolean",
-                    "title": "Before Assets",
-                    "description": "Whether this subsystem should run before the asset build.",
-                    
-                    "default": false
+                "steps": {
+                    "type": "array",
+                    "title": "Steps",
+                    "description": "The steps to this job should run.",
+                    "items": { "$ref": "#/definitions/step" }
+                }
+            }
+        },
+        "step": {
+            "title": "Step",
+            "description": "The step to run.",
+
+            "type": "object",
+            "required": ["name", "uses"],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "title": "Identifier",
+                    "description": "Optional machine identifier for this step, to allow referencing it from conditionals.",
+                    "examples": ["foobar"]
                 },
-                "options": {
+                "name": {
+                    "type": "string",
+                    "title": "Name",
+                    "description": "A descriptive name for this step.",
+                    "examples": ["Foo Bar"]
+                },
+                "uses": {
+                    "type": "string",
+                    "title": "Module",
+                    "description": "The subsystem module to load.",
+                    "examples": ["buildsys"]
+                },
+                "with": {
                     "type": "object",
                     "title": "Options",
                     "description": "Options to pass to the subsystem.",
-                    
                     "additionalProperties": true,
                     "examples": [{"foobar": 1234}]
                 }

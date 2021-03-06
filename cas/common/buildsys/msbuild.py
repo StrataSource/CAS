@@ -46,7 +46,7 @@ class MSBuildCompiler(BaseCompiler):
             args.append(f"/p:{k}={v}")
 
         self._logger.debug(f"Running MSBuild with parameters: {args}")
-        returncode = self._env.run_tool(args, cwd=self._env.src)
+        returncode = self._env.run_tool(args, cwd=self._env.paths.src)
         return returncode == 0
 
     def _build_default_parameters(self) -> Dict[str, str]:

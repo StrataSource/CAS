@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import yaml
 import argparse
 import logging
 import multiprocessing
@@ -19,26 +20,12 @@ cjson_regex = re.compile(
 def _resolve_root_path() -> Path:
     root = Path.cwd()
     while True:
-        dirs = os.listdir(root)
-        if "content" in dirs and "game" in dirs:
-            # we may have a match, verify we have a valid path
-            if Path(os.path.join(root, "content", "cas.jsonc")).exists():
-                return Path(root).resolve()
+        if Path(os.path.join(root, "cas.yaml")).exists():
+            return Path(root).resolve()
         if not root.parent or root.parent == root:
             break
         root = root.parent
     return None
-
-
-def _load_cjson(text: str) -> dict:
-    def __re_sub(match):
-        if match.group(2) is not None:
-            return ""
-        else:
-            return match.group(1)
-
-    result = cjson_regex.sub(__re_sub, text)
-    return json.loads(result)
 
 
 def main():
@@ -73,9 +60,9 @@ def main():
     )
     parser.add_argument(
         "-s",
-        "--build-categories",
+        "--build-jobs",
         type=str.lower,
-        help="Comma-seperated list of categories to include in the build. If not specified, all categories will be assumed.",
+        help="Comma-seperated list of jobs to include in the build. If not specified, all jobs will run.",
     )
     parser.add_argument(
         "-v",
@@ -129,17 +116,15 @@ def main():
         )
         exit(1)
 
-    content_path = root_path.joinpath("content")
-
-    config_file = content_path.joinpath("cas.jsonc")
+    config_file = root_path.joinpath("cas.yaml")
     if not config_file.exists():
         logger.error(
-            "Couldn't find cas.jsonc. If you don't yet have one, please see the documentation for a template."
+            "Couldn't find cas.yaml. If you don't yet have one, please see the documentation for a template."
         )
         exit(1)
 
-    with config_file.open("r") as f:
-        config = DotMap(_load_cjson(f.read()))
+    with config_file.open("rb") as f:
+        config = DotMap(yaml.full_load(f))
 
     # apply overrides
     if not args.override:
@@ -151,8 +136,9 @@ def main():
             val = spl[1]
 
             # if it starts with [ or {, parse as json
+            # TODO - dump support for this - janky and doesn't really work
             if val.startswith("[") or val.startswith("{"):
-                val = _load_cjson(val)
+                val = json.loads(val)
             elif val.isdigit():
                 val = int(val)
 

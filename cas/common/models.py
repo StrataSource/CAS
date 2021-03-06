@@ -3,8 +3,9 @@ from cas.common.steamtools import SteamInstance
 from cas.common.config import ConfigurationUtilities, LazyDynamicBase
 from cas.common.cache import CacheManager
 
+from dotmap import DotMap
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Union, List
 import os
 import logging
 import subprocess
@@ -18,28 +19,27 @@ class BuildEnvironment:
     def __init__(self, path: str, config: dict):
         self.config = ConfigurationUtilities.parse_root_config(path, config)
 
+        self.paths = DotMap()
+        for k, v in self.config.paths.items():
+            self.paths[k] = Path(v).resolve()
+        self.paths.root = Path(path).resolve()
+
         self.cache = CacheManager(path)
         self.cache.load()
 
         self.build_type = self.config.args.build_type
-        self.build_categories = None
+        self.build_jobs = None
 
-        categories = self.config.args.build_categories
-        if categories:
-            categories = categories.split(",")
-            self.build_categories = frozenset(categories)
+        job_tmp = self.config.args.build_jobs
+        if job_tmp:
+            job_tmp = job_tmp.split(",")
+            self.build_jobs = frozenset(job_tmp)
 
         self.verbose = self.config.args.verbose
-
-        self.root = self.config.path.root
-        self.content = self.config.path.content
-        self.game = self.config.path.game
-        self.src = self.config.path.src
-
         self.platform = utilities.resolve_platform_name()
         self.steam = None
 
-        self._setup_bindir()
+        # self._setup_bindir()
 
     def _get_appid_folder(self, appid: int) -> Path:
         if not self.steam:
@@ -112,7 +112,7 @@ class BuildEnvironment:
         return subprocess.run(*args, **dict(predef, **kwargs))
 
     def run_tool(
-        self, args: list[str], source: bool = False, cwd: Union[str, Path] = None
+        self, args: List[str], source: bool = False, cwd: Union[str, Path] = None
     ) -> int:
         """
         High-level interface to run an executable with extra parameters
@@ -181,6 +181,12 @@ class BuildSubsystem:
         Rehashes the configuration and saves it in our cache
         """
         self._cache["config"] = utilities.hash_object_sha256(self._get_config_raw())
+
+    def required_paths(self) -> List[str]:
+        """
+        Returns a list of path IDs required to run this subsystem
+        """
+        return []
 
     def build(self, force: bool = False) -> BuildResult:
         """

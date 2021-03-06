@@ -49,7 +49,7 @@ class SteamworksSubsystem(BuildSubsystem):
 
         user, pwd = self._get_credentials()
         args = [tool_path, "+login", user, pwd] + script_cmd + ["+quit"]
-        ret = self.env.run_tool(args, cwd=self.env.src)
+        ret = self.env.run_tool(args, cwd=self.env.paths.src)
         return ret == 0
 
     def build(self, force: bool = False) -> BuildResult:

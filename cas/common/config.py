@@ -1,15 +1,17 @@
 import cas
 import cas.common.utilities as utilities
 
+import re
 import sys
 import json
-import multiprocessing
-from collections.abc import Sequence, Mapping
-from pathlib import Path
-
 import simpleeval
 import jsonschema
+import multiprocessing
+
 from dotmap import DotMap
+from pathlib import Path
+from typing import Any
+from collections.abc import Sequence, Mapping
 
 
 def extend_validator_with_default(validator_class):
@@ -28,6 +30,8 @@ def extend_validator_with_default(validator_class):
 DefaultValidatingDraft7Validator = extend_validator_with_default(
     jsonschema.Draft7Validator
 )
+
+CONDITION_REGEX = re.compile(r"\${{(?s)(.*)}}")
 
 
 class DataResolverScope(Mapping):
@@ -66,7 +70,7 @@ class DataResolver:
             {
                 "parent": parent,
                 "context": scope,
-                "path": self._data.path,
+                "path": self._data.paths,
                 "args": self._data.args,
                 "assets": self._data.assets,
                 "subsystems": self._data.subsystems,
@@ -79,49 +83,29 @@ class DataResolver:
 
     def _inject_config_str(self, config: str, eval_locals: Mapping) -> str:
         """
-        A terrible lexical parser for interpolated globals.
-        I.e. "build type: $(args.build)" returns "build type: trunk"
+        Injects variables into strings.
+        ${{ foo.bar }} -> helloworld
         """
-        prev = None
-        inblock = False
-        current = ""
-        result = ""
+        search = CONDITION_REGEX.search(config)
+        for i, group in enumerate(search.groups()):
+            # evaluate the expression
+            result = self.eval(group, None, None)
+            if not isinstance(result, str):
+                raise Exception(
+                    f"Expression '{group}' returned illegal value, expressions in strings must return strings"
+                )
+            config[search.start(i) : search.end(i)] = result
+        return config
 
-        for c in config:
-            if c == "$":
-                prev = c
-                continue
-            if not inblock and c == "(" and prev == "$":
-                # read to end for key
-                inblock = True
-            elif inblock and c == ")":
-                value = utilities.get_dotpath_value(current, eval_locals)
-                if value is None:
-                    raise Exception(
-                        f"Value of configuration variable $({current}) was None"
-                    )
-                result += str(value)
-
-                current = ""
-                inblock = False
-            elif inblock:
-                current += c
-            else:
-                result += c
-            prev = c
-        return result
-
-    def eval(self, condition: str, parent: Mapping, scope: DataResolverScope) -> bool:
+    def eval(self, condition: str, parent: Mapping, scope: DataResolverScope) -> Any:
         # avoid infinite recusion
         if isinstance(parent, LazyDynamicMapping):
             parent = parent._data
 
         eval_locals = self.build_eval_locals(parent, scope)
-
-        injected = self._inject_config_str(condition, eval_locals)
         evaluator = simpleeval.EvalWithCompoundTypes(names=eval_locals)
 
-        result = evaluator.eval(injected)
+        result = evaluator.eval(condition)
         # logging.debug(f'\"{cond}\" evaluated to: {result}')
 
         return result
@@ -208,25 +192,29 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
         parent=None,
     ):
         super().__init__(data, resolver, scope, parent)
-        self._expressions = self._data.get("@expressions", {})
-        self._conditions = self._data.get("@conditions", {})
 
         # strip special members and members that don't match conditions immediately
         self._data = {k: v for k, v in self._data.items() if self._eval_condition(k)}
 
-    def _eval_condition(self, key: str):
-        if key in {"@expressions", "@conditions"}:
+    def _eval_condition(self, key: str) -> bool:
+        """
+        Evaluates an expression on a key as a condition.
+        """
+        # parse the key name as the expression
+        groups = CONDITION_REGEX.search(key).groups()
+        if len(groups) != 1:
             return False
-        condition = self._conditions.get(key)
-        if isinstance(condition, str) and not self._resolver.eval(
-            condition, self, self._scope
-        ):
-            return False
-        return True
+
+        result = self._resolver.eval(groups[0], self, self._scope)
+        if not isinstance(result, bool):
+            raise Exception(
+                "Expression '{group}' returned an illegal value, expressions treated as conditions must return a boolean value"
+            )
+        return result
 
     def _transform_kv(self, key: str, value):
         """
-        Evaluates @expressions and @conditions on a key
+        Runs runtime transform operations on a key/value pair
         """
         expression = self._expressions.get(key)
         if isinstance(expression, str):
@@ -300,17 +288,9 @@ class ConfigurationUtilities:
 
         # validate all subsystem options
         validators = {}
-        prefix = "cas.subsystems."
-        for k, subsystem in config["subsystems"].items():
-            if k in {"@conditions", "@expressions"}:
-                continue
-
-            module = subsystem.module
-
-            # validating third-party subsystems is not supported yet
-            if not module.startswith(prefix):
-                continue
-            sub_name = module[len(prefix) :]
+        for k, job in config.jobs.items():
+            for step in job.steps:
+                sub_name = step.uses
 
             if sub_name not in validators:
                 sub_path = schema_path.joinpath("subsystems", f"{sub_name}.json")
@@ -320,23 +300,23 @@ class ConfigurationUtilities:
                     validators[sub_name] = DefaultValidatingDraft7Validator(
                         json.load(f)
                     )
-            if subsystem.get("options") is None:
+            if step.get("with") is None:
                 continue
-            validators[sub_name].validate(subsystem.options)
+            validators[sub_name].validate(step["with"])
 
         # setup the dotmap that we'll use to perform lazy resolution
         config = DotMap(config)
 
-        config.path.root = root
-        config.path.content = root.joinpath("content")
-        config.path.game = root.joinpath("game")
-        config.path.src = root.joinpath("src")
+        # config.path.root = root # no more root path!!!
+        # config.path.content = root.joinpath("content")
+        # config.path.game = root.joinpath("game")
+        # config.path.src = root.joinpath("src")
 
-        config.path.devtools = config.path.src.joinpath("devtools")
-        config.path.secrets = config.path.devtools.joinpath("buildsys", "secrets")
-        config.path.vproject = config.path.game.joinpath(
-            config.options.project
-        ).resolve()
+        # config.path.devtools = config.path.src.joinpath("devtools")
+        # config.path.secrets = config.path.devtools.joinpath("buildsys", "secrets")
+        # config.path.vproject = config.path.game.joinpath(
+        #    config.options.project
+        # ).resolve()
 
         # create the root resolver and the map
         resolver = DataResolver(config)

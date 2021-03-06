@@ -28,6 +28,7 @@ setuptools.setup(
         "simpleeval",
         "appdirs",
         "dotmap",
+        "pyyaml",
         "tqdm",
         "vdf",
         "requests",

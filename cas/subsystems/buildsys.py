@@ -6,6 +6,7 @@ from cas.common.buildsys.vpc import VPCInstance
 import cas.common.utilities
 import os
 from pathlib import Path
+from typing import List
 
 
 class BuildsysSubsystem(BuildSubsystem):
@@ -22,6 +23,9 @@ class BuildsysSubsystem(BuildSubsystem):
             self._compiler = MSBuildCompiler(self.env, self.config, self._platform)
         else:
             self._compiler = PosixCompiler(self.env, self.config, self._platform)
+
+    def required_paths(self) -> List[str]:
+        return ["src", "devtools"]
 
     def build(self, force: bool = False) -> BuildResult:
         # configure stage (run VPC, build makefiles)
@@ -52,7 +56,7 @@ class BuildsysSubsystem(BuildSubsystem):
 
         sln_ext = f"{self._platform}.sln"
         proj_ext = f"{self._platform}.vcxproj"
-        for root, _, files in os.walk(self.env.src):
+        for root, _, files in os.walk(self.env.paths.src):
             for f in files:
                 if (
                     f.endswith(".vpc_crc")

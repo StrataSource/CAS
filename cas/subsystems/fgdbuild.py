@@ -15,8 +15,8 @@ class FGDBuildSubsystem(BuildSubsystem):
     def build(self, force: bool = False) -> BuildResult:
         project = self.env.config.options.project
 
-        srcpath = Path(self.env.root).joinpath(self.config.source).resolve()
-        destpath = Path(self.env.root).joinpath(self.config.dest).resolve()
+        srcpath = Path(self.env.paths.root).joinpath(self.config.source).resolve()
+        destpath = Path(self.env.paths.root).joinpath(self.config.dest).resolve()
 
         spec = importlib.util.spec_from_file_location(
             "hammeraddons.unifyfgd", srcpath.joinpath("unify_fgd.py")

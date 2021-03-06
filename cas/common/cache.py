@@ -11,7 +11,7 @@ from dotmap import DotMap
 class CacheManager:
     def __init__(self, root: Path):
         self._root = root
-        self._file = root.joinpath("content", ".cas_cache.json")
+        self._file = root.joinpath(".cas_cache.json")
         self._caches = DotMap()
 
     def load(self):
