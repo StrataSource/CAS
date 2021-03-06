@@ -4,7 +4,7 @@ from cas.common.config import ConfigurationUtilities, LazyDynamicBase
 from cas.common.cache import CacheManager
 
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, List, Union
 import os
 import logging
 import subprocess
@@ -112,7 +112,7 @@ class BuildEnvironment:
         return subprocess.run(*args, **dict(predef, **kwargs))
 
     def run_tool(
-        self, args: list[str], source: bool = False, cwd: Union[str, Path] = None
+        self, args: List[str], source: bool = False, cwd: Union[str, Path] = None
     ) -> int:
         """
         High-level interface to run an executable with extra parameters
