@@ -10,7 +10,7 @@ import multiprocessing
 
 from dotmap import DotMap
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple
 from collections.abc import Sequence, Mapping
 
 
@@ -31,7 +31,7 @@ DefaultValidatingDraft7Validator = extend_validator_with_default(
     jsonschema.Draft7Validator
 )
 
-CONDITION_REGEX = re.compile(r"\${{(?s)(.*)}}")
+CONDITION_REGEX = re.compile(r"(?s)\${{(.*)}}")
 
 
 class DataResolverScope(Mapping):
@@ -49,13 +49,6 @@ class DataResolverScope(Mapping):
     def __iter__(self):
         return iter(self._data)
 
-    def get_subsystem_output(self, subsystem: str, output: str):
-        return self._data.subsystems[subsystem].outputs[output]
-
-    def exclude_subsystem_input_files(self, subsystem: str, root: Path):
-        files = self.get_subsystem_output(subsystem, "files")
-        return utilities.rglob_invert(utilities.relative_paths(root, files))
-
 
 class DataResolver:
     """
@@ -65,7 +58,7 @@ class DataResolver:
     def __init__(self, data: Mapping):
         self._data = data
 
-    def build_eval_locals(self, parent: Mapping, scope: DataResolverScope) -> Mapping:
+    def _build_eval_locals(self, parent: Mapping, scope: Mapping) -> Mapping:
         return DotMap(
             {
                 "parent": parent,
@@ -81,15 +74,18 @@ class DataResolver:
             }
         )
 
-    def _inject_config_str(self, config: str, eval_locals: Mapping) -> str:
+    def _inject_config_str(self, config: str, scope: Mapping) -> str:
         """
         Injects variables into strings.
         ${{ foo.bar }} -> helloworld
         """
         search = CONDITION_REGEX.search(config)
+        if not search:
+            return config
+
         for i, group in enumerate(search.groups()):
             # evaluate the expression
-            result = self.eval(group, None, None)
+            result = self.eval(group, None, scope)
             if not isinstance(result, str):
                 raise Exception(
                     f"Expression '{group}' returned illegal value, expressions in strings must return strings"
@@ -97,12 +93,12 @@ class DataResolver:
             config[search.start(i) : search.end(i)] = result
         return config
 
-    def eval(self, condition: str, parent: Mapping, scope: DataResolverScope) -> Any:
+    def eval(self, condition: str, parent: Mapping, scope: Mapping) -> Any:
         # avoid infinite recusion
         if isinstance(parent, LazyDynamicMapping):
             parent = parent._data
 
-        eval_locals = self.build_eval_locals(parent, scope)
+        eval_locals = self._build_eval_locals(parent, scope)
         evaluator = simpleeval.EvalWithCompoundTypes(names=eval_locals)
 
         result = evaluator.eval(condition)
@@ -147,12 +143,47 @@ class LazyDynamicBase:
         self._transform_map = {list: LazyDynamicSequence, dict: LazyDynamicDotMap}
 
     def _transform_object(self, data):
-        eval_locals = self._resolver.build_eval_locals(self, self._scope)
+        eval_locals = self._resolver._build_eval_locals(self, self._scope)
         for k, v in self._transform_map.items():
             if isinstance(data, k):
                 resolved = v(data, self._resolver, self._scope, self)
                 return resolved
         return self._resolver.resolve(data, eval_locals)
+
+    # transforms
+    # test:
+    #     {{ foobar == "abcde" }}:
+    #         True
+    # to
+    # test: True
+    def _eval_condition(self, toplevel: Mapping) -> Tuple[bool, Any]:
+        # we should have a mapping
+        if not isinstance(toplevel, Mapping):
+            return True, None
+
+        # mapping should only have one key, the cond
+        keys = list(toplevel.keys())
+        if len(keys) != 1:
+            return True, None
+        key = keys[0]
+
+        # parse the key name as the expression
+        search = CONDITION_REGEX.search(key)
+        if not search:
+            return True, None
+        groups = search.groups()
+        if len(groups) != 1:
+            return True, None
+
+        result = self._resolver.eval(groups[0], self, self._scope)
+        if not isinstance(result, bool):
+            raise Exception(
+                "Expression '{group}' returned an illegal value, expressions treated as conditions must return a boolean value"
+            )
+        if result:
+            return True, toplevel[key]
+        else:
+            return False, None
 
 
 class LazyDynamicSequence(LazyDynamicBase, Sequence):
@@ -168,6 +199,15 @@ class LazyDynamicSequence(LazyDynamicBase, Sequence):
         parent=None,
     ):
         super().__init__(data, resolver, scope, parent)
+
+        results = []
+        for item in self._data.copy():
+            result, value = self._eval_condition(item)
+            if result and value:
+                results.append(value)
+            elif result:
+                results.append(item)
+        self._data = results
 
     def __getitem__(self, key):
         return self._transform_object(self._data[key])
@@ -193,37 +233,18 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
     ):
         super().__init__(data, resolver, scope, parent)
 
-        # strip special members and members that don't match conditions immediately
-        self._data = {k: v for k, v in self._data.items() if self._eval_condition(k)}
-
-    def _eval_condition(self, key: str) -> bool:
-        """
-        Evaluates an expression on a key as a condition.
-        """
-        # parse the key name as the expression
-        groups = CONDITION_REGEX.search(key).groups()
-        if len(groups) != 1:
-            return False
-
-        result = self._resolver.eval(groups[0], self, self._scope)
-        if not isinstance(result, bool):
-            raise Exception(
-                "Expression '{group}' returned an illegal value, expressions treated as conditions must return a boolean value"
-            )
-        return result
-
-    def _transform_kv(self, key: str, value):
-        """
-        Runs runtime transform operations on a key/value pair
-        """
-        expression = self._expressions.get(key)
-        if isinstance(expression, str):
-            value = self._resolver.eval(expression, self, self._scope)
-
-        return self._transform_object(value)
+        # evaluate our key conditions
+        results = {}
+        for k, v in self._data.copy().items():
+            result, value = self._eval_condition(v)
+            if result and value:
+                results[k] = value
+            elif result:
+                results[k] = v
+        self._data = results
 
     def __getitem__(self, key):
-        return self._transform_kv(key, self._data.get(key))
+        return self._transform_object(self._data.get(key))
 
     def __len__(self):
         return len(self._data)
@@ -235,8 +256,7 @@ class LazyDynamicMapping(LazyDynamicBase, Mapping):
         result = self._data.get(key, default)
         if result is None:
             return None
-
-        return self._transform_kv(key, result)
+        return self._transform_object(result)
 
     def with_scope(self, scope: DataResolverScope):
         return LazyDynamicMapping(self._data, self._resolver, scope)
@@ -266,12 +286,10 @@ class LazyDynamicDotMap(LazyDynamicMapping):
             "_resolver",
             "_scope",
             "_transform_map",
-            "_expressions",
-            "_conditionals",
             "_dotmap",
         }:
             return super(self.__class__, self).__getattribute__(k)
-        return self._transform_kv(k, self._data.__getattr__(k))
+        return self._transform_object(self._data.__getattr__(k))
 
     def with_scope(self, scope):
         return LazyDynamicDotMap(self._data, self._resolver, scope)
