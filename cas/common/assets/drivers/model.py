@@ -80,7 +80,7 @@ class ModelDriver(SerialDriver):
         return PrecompileResult(inputs, outputs | extra)
 
     def compile(self, context: AssetBuildContext, asset: Asset) -> bool:
-        args = [str(self.tool), str(asset.path)]
+        args = [str(self.tool), '-nosteam', str(asset.path)]
 
         returncode = self.env.run_tool(args, source=True)
         return returncode == 0

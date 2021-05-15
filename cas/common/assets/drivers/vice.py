@@ -27,7 +27,7 @@ class ViceDriver(BatchedDriver):
         if len(key) != 8:
             raise Exception("ICE key must be exactly 8 characters long")
 
-        args = [str(self.tool), "-quiet", "-nopause", "-encrypt", key, "-newext", "ekv"]
+        args = [str(self.tool), "-nosteam", "-quiet", "-nopause", "-encrypt", key, "-newext", "ekv"]
         for asset in assets:
             args.append(str(asset.path))
 
